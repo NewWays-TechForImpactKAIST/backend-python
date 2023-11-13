@@ -2,7 +2,7 @@ version: "3.8"
 services:
   newways-backend:
     container_name: newways-backend
-    image: "ghcr.io/newways-techforimpactkaist/backend-python:latest"
+    image: "ghcr.io/newways-techforimpactkaist/backend-python:dev"
     ports:
       - "${PORT:?}:80"
     environment:

@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  newways-backend:
+    container_name: newways-backend
+    image: "newways-backend:test"
+    ports:
+      - "${PORT:?}:80"
+    environment:
+      - MONGO_CONNECTION_URI=${MONGO_CONNECTION_URI:?}
+      - MONGO_DATABASE=${MONGO_DATABASE:?}
+  watchtower:
+    container_name: newways-watchtower
+    image: "containrrr/watchtower:latest"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: --interval 60 --cleanup newways-backend

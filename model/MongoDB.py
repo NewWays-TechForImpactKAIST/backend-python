@@ -1,5 +1,8 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MongoDB:
     def __init__(self):
@@ -7,8 +10,8 @@ class MongoDB:
         self.db = None
     
     def connect(self):
-        self.client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
-        self.db = AsyncIOMotorDatabase(self.client, os.getenv("MONGO_DB"))
+        self.client = AsyncIOMotorClient(os.getenv("MONGO_CONNECTION_URI"))
+        self.db = AsyncIOMotorDatabase(self.client, os.getenv("MONGO_DATABASE"))
 
     def close(self):
         self.client.close()

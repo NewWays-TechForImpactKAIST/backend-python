@@ -13,7 +13,7 @@ def count(data, stair=0):
     return Counter(data)
 
 
-def gini_simpson(data, stair=0, opts=False):
+def gini_simpson(data, stair=0, opts=True):
     """
     Gini-Simpson diversity index
     """
@@ -29,7 +29,7 @@ def gini_simpson(data, stair=0, opts=False):
     return gs_idx
 
 
-def shannon(data, stair=0, opts=False):
+def shannon(data, stair=0, opts=True):
     """
     Shannon diversity index
     """

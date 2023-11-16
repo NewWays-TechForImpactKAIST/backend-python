@@ -3,12 +3,12 @@ from model import BasicResponse, MongoDB, ScrapResult
 from utils import diversity
 from typing import TypeVar
 
-router = APIRouter()
+router = APIRouter("/localCouncil", tags=["localCouncil"])
 
 AGE_STAIR = 10
 
 
-@router.get("/localCouncil/template-data/{metroId}/{localId}")
+@router.get("/template-data/{metroId}/{localId}")
 async def getLocalTemplateData(
     metroId: int, localId: int, factor: ScrapResult.FactorType
 ) -> BasicResponse.ErrorResponse | ScrapResult.SexTemplateData | ScrapResult.AgeTemplateData | ScrapResult.PartyTemplateData:
@@ -55,7 +55,7 @@ async def getLocalTemplateData(
 
 T = TypeVar("T", ScrapResult.SexChartData, ScrapResult.AgeChartData, ScrapResult.PartyChartData)
 
-@router.get("/localCouncil/chart-data/{metroId}/{localId}")
+@router.get("/chart-data/{metroId}/{localId}")
 async def getLocalChartData(
     metroId: int, localId: int, factor: ScrapResult.FactorType
 ) -> BasicResponse.ErrorResponse | ScrapResult.ChartData[T]:

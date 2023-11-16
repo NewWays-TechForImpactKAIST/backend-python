@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 from model import MongoDB, CommonInfo
 
-router = APIRouter()
+router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
 
 
-@router.get("/localCouncil/regionInfo")
+@router.get("/regionInfo")
 async def getRegionInfo() -> list[CommonInfo.RegionInfo]:
     regions = []
     async for metro in MongoDB.client.district_db.get_collection(
@@ -27,7 +27,7 @@ async def getRegionInfo() -> list[CommonInfo.RegionInfo]:
     return regions
 
 
-@router.get("/localCouncil/partyInfo")
+@router.get("/partyInfo")
 async def getPartyInfo() -> list[CommonInfo.PartyInfo]:
     parties = []
     async for party in MongoDB.client.district_db.get_collection("party").find():

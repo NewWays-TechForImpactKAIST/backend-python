@@ -1,11 +1,37 @@
 from fastapi import APIRouter
 
-router = APIRouter()
+from model.ResponseType import *
 
-@router.get("/")
-async def getScrapResult():
+router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
+
+@router.get("/regionInfo", response_model=RegionInfo)
+async def getRegionInfo():
     try:
-        return {"message": "No World"}
+        return []
     except Exception as e:
         print(e)
-        return {"message": "Error"}
+        return []
+
+@router.get("/partyInfo", response_model=PartyInfo)
+async def getPartyInfo():
+    try:
+        return []
+    except Exception as e:
+        print(e)
+        return []
+
+@router.get("/template-data/{metroId}/{localId}/{factor}", response_model=Diversity)
+async def getTemplateData(metroId: int, localId: int, factor: str):
+    try:
+        return []
+    except Exception as e:
+        print(e)
+        return []
+
+@router.get("/chart-data/{metroId}/{localId}/{factor}", response_model=ChartResponse)
+async def getTemplateData(metroId: int, localId: int, factor: str):
+    try:
+        return []
+    except Exception as e:
+        print(e)
+        return []

@@ -81,14 +81,14 @@ async def getLocalChartData(
         case ScrapResult.FactorType.sex:
             sex_list = [councilor["sex"] async for councilor in councilors]
             sex_count = diversity.count(sex_list)
-            return ScrapResult.SexChartData.model_validate(
+            return ScrapResult.ChartData[ScrapResult.SexChartDataPoint].model_validate(
                 {"data": [{"sex": sex, "count": sex_count[sex]} for sex in sex_count]}
             )
 
         case ScrapResult.FactorType.age:
             age_list = [councilor["age"] async for councilor in councilors]
             age_count = diversity.count(age_list, stair=AGE_STAIR)
-            return ScrapResult.AgeChartData.model_validate(
+            return ScrapResult.ChartData[ScrapResult.AgeChartDataPoint].model_validate(
                 {
                     "data": [
                         {
@@ -104,7 +104,7 @@ async def getLocalChartData(
         case ScrapResult.FactorType.party:
             party_list = [councilor["party"] async for councilor in councilors]
             party_count = diversity.count(party_list)
-            return ScrapResult.PartyChartData.model_validate(
+            return ScrapResult.ChartData[ScrapResult.PartyChartDataPoint].model_validate(
                 {
                     "data": [
                         {"party": party, "count": party_count[party]}

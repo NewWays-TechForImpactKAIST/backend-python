@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from enum import StrEnum
+from typing import TypeVar, Generic
 
 
 class SexType(StrEnum):
@@ -36,8 +37,6 @@ class SexChartDataPoint(BaseModel):
     count: int
 
 
-class SexChartData(BaseModel):
-    data: list[SexChartDataPoint]
 
 
 class AgeChartDataPoint(BaseModel):
@@ -46,17 +45,16 @@ class AgeChartDataPoint(BaseModel):
     count: int
 
 
-class AgeChartData(BaseModel):
-    data: list[AgeChartDataPoint]
-
 
 class PartyChartDataPoint(BaseModel):
     party: str
     count: int
 
 
-class PartyChartData(BaseModel):
-    data: list[PartyChartDataPoint]
+T = TypeVar("T", SexChartDataPoint, AgeChartDataPoint, PartyChartDataPoint)
+
+class ChartData(BaseModel, Generic[T]):
+    data: list[T]
 
 
 # ==============================================

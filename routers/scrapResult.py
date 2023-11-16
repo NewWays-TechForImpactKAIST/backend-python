@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from model import BasicResponse, MongoDB, ScrapResult
 from utils import diversity
+from typing import TypeVar
 
 router = APIRouter()
 
@@ -52,10 +53,12 @@ async def getLocalTemplateData(
             )
 
 
+T = TypeVar("T", ScrapResult.SexChartData, ScrapResult.AgeChartData, ScrapResult.PartyChartData)
+
 @router.get("/localCouncil/chart-data/{metroId}/{localId}")
 async def getLocalChartData(
     metroId: int, localId: int, factor: ScrapResult.FactorType
-) -> BasicResponse.ErrorResponse | ScrapResult.SexChartData | ScrapResult.AgeChartData | ScrapResult.PartyChartData:
+) -> BasicResponse.ErrorResponse | ScrapResult.ChartData[T]:
     if (
         await MongoDB.client.district_db["local_district"].find_one(
             {"local_id": localId, "metro_id": metroId}

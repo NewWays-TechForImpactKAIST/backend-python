@@ -2,7 +2,13 @@ from collections import Counter
 import math
 
 def count(data, stair = 0):
-    return Counter(data)
+    """
+    Count the number of occurrences of each value in a dataset
+    """
+    counts = Counter()
+    for row in data:
+        counts[row[stair]] += 1
+    return counts
 
 def gini_simpson(data, stair, opts):
     """

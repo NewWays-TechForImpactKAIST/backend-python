@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from enum import Enum, StrEnum
+from enum import StrEnum
 
 class CouncilType(StrEnum):
     local_council = "local_council"

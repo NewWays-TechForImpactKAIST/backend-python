@@ -4,16 +4,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class MongoDB:
     def __init__(self):
         self.client = None
-        self.db = None
-    
+        self.council_db = None
+        self.district_db = None
+
     def connect(self):
         self.client = AsyncIOMotorClient(os.getenv("MONGO_CONNECTION_URI"))
-        self.db = AsyncIOMotorDatabase(self.client, os.getenv("MONGO_DATABASE"))
+        self.council_db = AsyncIOMotorDatabase(self.client, "council")
+        self.district_db = AsyncIOMotorDatabase(self.client, "district")
 
     def close(self):
         self.client.close()
+
 
 client = MongoDB()

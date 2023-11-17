@@ -3,6 +3,7 @@ from model import BasicResponse, MongoDB, ScrapResult
 from utils import diversity
 from typing import TypeVar
 
+
 router = APIRouter("/localCouncil", tags=["localCouncil"])
 
 AGE_STAIR = 10

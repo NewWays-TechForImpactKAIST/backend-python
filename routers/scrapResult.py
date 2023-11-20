@@ -4,7 +4,7 @@ from utils import diversity
 from typing import TypeVar
 
 
-router = APIRouter("/localCouncil", tags=["localCouncil"])
+router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
 
 AGE_STAIR = 10
 

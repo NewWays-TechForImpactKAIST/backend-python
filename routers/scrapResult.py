@@ -54,7 +54,7 @@ async def getLocalTemplateData(
             )
 
 
-T = TypeVar("T", ScrapResult.SexChartData, ScrapResult.AgeChartData, ScrapResult.PartyChartData)
+T = TypeVar("T", ScrapResult.SexChartDataPoint, ScrapResult.AgeChartDataPoint, ScrapResult.PartyChartDataPoint)
 
 @router.get("/chart-data/{metroId}/{localId}")
 async def getLocalChartData(

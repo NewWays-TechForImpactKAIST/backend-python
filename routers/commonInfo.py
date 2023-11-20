@@ -14,7 +14,7 @@ async def getRegionInfo() -> list[CommonInfo.RegionInfo]:
         async for local in MongoDB.client.district_db.get_collection(
             "local_district"
         ).find({"metro_id": metro["metro_id"]}):
-            local_districts.append({"name": local["name_ko"], "id": local["local_id"]})
+            local_districts.append(CommonInfo.LocalInfo.model_validate({"name": local["name_ko"], "id": local["local_id"]}))
         regions.append(
             CommonInfo.RegionInfo.model_validate(
                 {

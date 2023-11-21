@@ -3,13 +3,13 @@ from enum import StrEnum
 from typing import TypeVar, Generic
 
 
-class SexType(StrEnum):
+class GenderType(StrEnum):
     male = "남"
     female = "여"
 
 
 class FactorType(StrEnum):
-    sex = "sex"
+    gender = "gender"
     age = "age"
     party = "party"
 
@@ -17,8 +17,8 @@ class FactorType(StrEnum):
 # ==============================================
 # =            Template Data Types             =
 # ==============================================
-class SexTemplateData(BaseModel):
-    sexDiversityIndex: float
+class GenderTemplateData(BaseModel):
+    genderDiversityIndex: float
 
 
 class AgeTemplateData(BaseModel):
@@ -32,11 +32,9 @@ class PartyTemplateData(BaseModel):
 # ==============================================
 # =             Chart Data Types               =
 # ==============================================
-class SexChartDataPoint(BaseModel):
-    sex: SexType
+class GenderChartDataPoint(BaseModel):
+    gender: GenderType
     count: int
-
-
 
 
 class AgeChartDataPoint(BaseModel):
@@ -45,13 +43,13 @@ class AgeChartDataPoint(BaseModel):
     count: int
 
 
-
 class PartyChartDataPoint(BaseModel):
     party: str
     count: int
 
 
-T = TypeVar("T", SexChartDataPoint, AgeChartDataPoint, PartyChartDataPoint)
+T = TypeVar("T", GenderChartDataPoint, AgeChartDataPoint, PartyChartDataPoint)
+
 
 class ChartData(BaseModel, Generic[T]):
     data: list[T]

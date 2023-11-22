@@ -103,7 +103,7 @@ async def getLocalChartData(
                     "data": [
                         {
                             "minAge": age,
-                            "maxAge": age + AGE_STAIR - 1,
+                            "maxAge": age + AGE_STAIR,
                             "count": age_count[age],
                         }
                         for age in age_count

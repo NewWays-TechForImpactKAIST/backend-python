@@ -39,7 +39,7 @@ class GenderChartDataPoint(BaseModel):
 
 class AgeChartDataPoint(BaseModel):
     minAge: int  # 닫힌 구간
-    maxAge: int  # 닫힌 구간
+    maxAge: int  # 열린 구간
     count: int
 
 

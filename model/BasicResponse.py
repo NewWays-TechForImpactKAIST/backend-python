@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 SUCCESS = 200
 REGION_CODE_ERR = 400
+COLLECTION_NOT_EXIST_ERR = 600
 
 
 class MessageResponse(BaseModel):

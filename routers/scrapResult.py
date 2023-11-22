@@ -41,7 +41,58 @@ async def getLocalTemplateData(
             age_list = [councilor["age"] async for councilor in councilors]
             age_diversity_index = diversity.gini_simpson(age_list, stair=AGE_STAIR)
             return ScrapResult.AgeTemplateData.model_validate(
-                {"ageDiversityIndex": age_diversity_index}
+                {
+                    "metroId": metroId,
+                    "localId": localId,
+                    "rankingParagraph": {
+                        "ageDiversityIndex": age_diversity_index,
+                        "allIndices": [
+                            {"metroId": 3, "rank": 2, "ageDiversityIndex": 0.9},
+                            {"metroId": 14, "rank": 7, "ageDiversityIndex": 0.4},
+                            {"metroId": 15, "rank": 18, "ageDiversityIndex": 0.2},
+                        ],
+                    },
+                    "indexHistoryParagraph": {
+                        "mostRecentYear": 2022,
+                        "history": [
+                            {
+                                "year": 2022,
+                                "unit": 8,
+                                "candidateCount": 80,
+                                "candidateDiversityIndex": 0.11,
+                                "candidateDiversityRank": 33,
+                                "electedDiversityIndex": 0.42,
+                                "electedDiversityRank": 12,
+                            },
+                            {
+                                "year": 2018,
+                                "unit": 7,
+                                "candidateCount": 70,
+                                "candidateDiversityIndex": 0.73,
+                                "candidateDiversityRank": 3,
+                                "electedDiversityIndex": 0.85,
+                                "electedDiversityRank": 2,
+                            },
+                        ],
+                    },
+                    "ageHistogramParagraph": {
+                        "year": 2022,
+                        "candidateCount": 80,
+                        "electedCount": 16,
+                        "firstQuintile": 66,
+                        "lastQuintile": 29,
+                        "divArea": {
+                            "localId": 172,
+                            "firstQuintile": 43,
+                            "lastQuintile": 21,
+                        },
+                        "uniArea": {
+                            "localId": 63,
+                            "firstQuintile": 84,
+                            "lastQuintile": 56,
+                        },
+                    },
+                }
             )
 
         case ScrapResult.FactorType.party:

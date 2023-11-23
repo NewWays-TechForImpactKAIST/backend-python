@@ -24,7 +24,7 @@ class GenderTemplateData(BaseModel):
 class AgeTemplateData(BaseModel):
     class AgeRankingParagraphData(BaseModel):
         class AgeRankingAllIndices(BaseModel):
-            metroId: int
+            localId: int
             rank: int
             ageDiversityIndex: float
 

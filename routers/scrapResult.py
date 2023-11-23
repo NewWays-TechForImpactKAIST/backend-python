@@ -1,7 +1,18 @@
-from fastapi import APIRouter
-from model import BasicResponse, MongoDB, ScrapResult
-from utils import diversity
 from typing import TypeVar
+from fastapi import APIRouter
+from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
+from model.MongoDB import client
+from model.ScrapResult import (
+    GenderTemplateData,
+    GenderChartDataPoint,
+    AgeTemplateData,
+    AgeChartDataPoint,
+    PartyTemplateData,
+    PartyChartDataPoint,
+    FactorType,
+    ChartData,
+)
+from utils import diversity
 
 
 router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
@@ -11,82 +22,207 @@ AGE_STAIR = 10
 
 @router.get("/template-data/{metroId}/{localId}")
 async def getLocalTemplateData(
-    metroId: int, localId: int, factor: ScrapResult.FactorType
-) -> BasicResponse.ErrorResponse | ScrapResult.GenderTemplateData | ScrapResult.AgeTemplateData | ScrapResult.PartyTemplateData:
+    metroId: int, localId: int, factor: FactorType
+) -> ErrorResponse | GenderTemplateData | AgeTemplateData | PartyTemplateData:
     if (
-        await MongoDB.client.district_db["local_district"].find_one(
+        await client.district_db["local_district"].find_one(
             {"localId": localId, "metroId": metroId}
         )
         is None
     ):
-        return BasicResponse.ErrorResponse.model_validate(
+        return ErrorResponse.model_validate(
             {
                 "error": "RegionCodeError",
-                "code": BasicResponse.REGION_CODE_ERR,
+                "code": REGION_CODE_ERR,
                 "message": f"No local district with metroId {metroId} and localId {localId}.",
             }
         )
 
-    councilors = MongoDB.client.council_db["local_councilor"].find({"localId": localId})
+    local_stat = await client.stats_db["diversity_index"].find_one({"localId": localId})
 
     match factor:
-        case ScrapResult.FactorType.gender:
-            gender_list = [councilor["gender"] async for councilor in councilors]
-            gender_diversity_index = diversity.gini_simpson(gender_list)
-            return ScrapResult.GenderTemplateData.model_validate(
-                {"genderDiversityIndex": gender_diversity_index}
+        case FactorType.gender:
+            return GenderTemplateData.model_validate(
+                {"genderDiversityIndex": local_stat["genderDiversityIndex"]}
             )
 
-        case ScrapResult.FactorType.age:
-            age_list = [councilor["age"] async for councilor in councilors]
-            age_diversity_index = diversity.gini_simpson(age_list, stair=AGE_STAIR)
-            return ScrapResult.AgeTemplateData.model_validate(
-                {"ageDiversityIndex": age_diversity_index}
+        case FactorType.age:
+            # ============================
+            #      rankingParagraph
+            # ============================
+            age_diversity_index = local_stat["ageDiversityIndex"]
+
+            localIds_of_same_metroId = [
+                doc["localId"]
+                async for doc in client.district_db["local_district"].find(
+                    {"metroId": metroId}
+                )
+            ]
+            all_indices = (
+                await client.stats_db["diversity_index"]
+                .find({"localId": {"$in": localIds_of_same_metroId}})
+                .to_list(500)
+            )
+            all_indices.sort(key=lambda x: x["ageDiversityRank"])
+
+            # ============================
+            #    ageHistogramParagraph
+            # ============================
+            age_stat_elected = (
+                await client.stats_db["age_stat"]
+                .aggregate(
+                    [
+                        {
+                            "$match": {
+                                "level": 2,
+                                "councilorType": "elected",
+                                "metroId": metroId,
+                                "localId": localId,
+                            }
+                        },
+                        {"$sort": {"year": -1}},
+                        {"$limit": 1},
+                    ]
+                )
+                .to_list(500)
+            )[0]
+            most_recent_year = age_stat_elected["year"]
+            age_stat_candidate = await client.stats_db["age_stat"].find_one(
+                {
+                    "level": 2,
+                    "councilorType": "candidate",
+                    "metroId": metroId,
+                    "localId": localId,
+                    "year": most_recent_year,
+                }
             )
 
-        case ScrapResult.FactorType.party:
-            party_list = [councilor["jdName"] async for councilor in councilors]
-            party_diversity_index = diversity.gini_simpson(party_list)
-            return ScrapResult.PartyTemplateData.model_validate(
+            divArea_id = (
+                await client.stats_db["diversity_index"].find_one(
+                    {"ageDiversityRank": 1}
+                )
+            )["localId"]
+            divArea = await client.stats_db["age_stat"].find_one(
+                {
+                    "level": 2,
+                    "councilorType": "elected",
+                    "localId": divArea_id,
+                    "year": most_recent_year,
+                }
+            )
+
+            uniArea_id = (
+                await client.stats_db["diversity_index"].find_one(
+                    {"ageDiversityRank": 226}
+                )
+            )["localId"]
+            uniArea = await client.stats_db["age_stat"].find_one(
+                {
+                    "level": 2,
+                    "councilorType": "elected",
+                    "localId": uniArea_id,
+                    "year": most_recent_year,
+                }
+            )
+
+            return AgeTemplateData.model_validate(
+                {
+                    "metroId": metroId,
+                    "localId": localId,
+                    "rankingParagraph": {
+                        "ageDiversityIndex": age_diversity_index,
+                        "allIndices": [
+                            {
+                                "localId": doc["localId"],
+                                "rank": idx + 1,
+                                "ageDiversityIndex": doc["ageDiversityIndex"],
+                            }
+                            for idx, doc in enumerate(all_indices)
+                        ],
+                    },
+                    "indexHistoryParagraph": {
+                        "mostRecentYear": 2022,
+                        "history": [
+                            {
+                                "year": 2022,
+                                "unit": 8,
+                                "candidateCount": 80,
+                                "candidateDiversityIndex": 0.11,
+                                "candidateDiversityRank": 33,
+                                "electedDiversityIndex": 0.42,
+                                "electedDiversityRank": 12,
+                            },
+                            {
+                                "year": 2018,
+                                "unit": 7,
+                                "candidateCount": 70,
+                                "candidateDiversityIndex": 0.73,
+                                "candidateDiversityRank": 3,
+                                "electedDiversityIndex": 0.85,
+                                "electedDiversityRank": 2,
+                            },
+                        ],
+                    },
+                    "ageHistogramParagraph": {
+                        "year": most_recent_year,
+                        "candidateCount": age_stat_candidate["data"][0]["population"],
+                        "electedCount": age_stat_elected["data"][0]["population"],
+                        "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
+                        "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
+                        "divArea": {
+                            "localId": divArea_id,
+                            "firstQuintile": divArea["data"][0]["firstquintile"],
+                            "lastQuintile": divArea["data"][0]["lastquintile"],
+                        },
+                        "uniArea": {
+                            "localId": uniArea_id,
+                            "firstQuintile": uniArea["data"][0]["firstquintile"],
+                            "lastQuintile": uniArea["data"][0]["lastquintile"],
+                        },
+                    },
+                }
+            )
+
+        case FactorType.party:
+            party_diversity_index = local_stat["partyDiversityIndex"]
+            return PartyTemplateData.model_validate(
                 {"partyDiversityIndex": party_diversity_index}
             )
 
 
 T = TypeVar(
     "T",
-    ScrapResult.GenderChartDataPoint,
-    ScrapResult.AgeChartDataPoint,
-    ScrapResult.PartyChartDataPoint,
+    GenderChartDataPoint,
+    AgeChartDataPoint,
+    PartyChartDataPoint,
 )
 
 
 @router.get("/chart-data/{metroId}/{localId}")
 async def getLocalChartData(
-    metroId: int, localId: int, factor: ScrapResult.FactorType
-) -> BasicResponse.ErrorResponse | ScrapResult.ChartData[T]:
+    metroId: int, localId: int, factor: FactorType
+) -> ErrorResponse | ChartData[T]:
     if (
-        await MongoDB.client.district_db["local_district"].find_one(
+        await client.district_db["local_district"].find_one(
             {"localId": localId, "metroId": metroId}
         )
         is None
     ):
-        return BasicResponse.ErrorResponse.model_validate(
+        return ErrorResponse.model_validate(
             {
                 "error": "RegionCodeError",
-                "code": BasicResponse.REGION_CODE_ERR,
+                "code": REGION_CODE_ERR,
                 "message": f"No local district with metroId {metroId} and localId {localId}.",
             }
         )
 
-    councilors = MongoDB.client.council_db["local_councilor"].find({"localId": localId})
+    councilors = client.council_db["local_councilor"].find({"localId": localId})
 
     match factor:
-        case ScrapResult.FactorType.gender:
+        case FactorType.gender:
             gender_list = [councilor["gender"] async for councilor in councilors]
             gender_count = diversity.count(gender_list)
-            return ScrapResult.ChartData[
-                ScrapResult.GenderChartDataPoint
-            ].model_validate(
+            return ChartData[GenderChartDataPoint].model_validate(
                 {
                     "data": [
                         {"gender": gender, "count": gender_count[gender]}
@@ -95,10 +231,10 @@ async def getLocalChartData(
                 }
             )
 
-        case ScrapResult.FactorType.age:
+        case FactorType.age:
             age_list = [councilor["age"] async for councilor in councilors]
             age_count = diversity.count(age_list, stair=AGE_STAIR)
-            return ScrapResult.ChartData[ScrapResult.AgeChartDataPoint].model_validate(
+            return ChartData[AgeChartDataPoint].model_validate(
                 {
                     "data": [
                         {
@@ -111,12 +247,10 @@ async def getLocalChartData(
                 }
             )
 
-        case ScrapResult.FactorType.party:
+        case FactorType.party:
             party_list = [councilor["jdName"] async for councilor in councilors]
             party_count = diversity.count(party_list)
-            return ScrapResult.ChartData[
-                ScrapResult.PartyChartDataPoint
-            ].model_validate(
+            return ChartData[PartyChartDataPoint].model_validate(
                 {
                     "data": [
                         {"party": party, "count": party_count[party]}

@@ -19,7 +19,7 @@ def gini_simpson(data, stair=0, opts=True):
     """
     counts = count(data, stair)
     total = sum(counts.values())
-    gs_idx = 1 - sum((n / total) ** 2 for n in counts.values())
+    gs_idx = 1 - sum((n / total) * ((n - 1) / (total - 1)) for n in counts.values())
 
     if opts:
         num_cats = len([c for c in counts.values() if c > 0])

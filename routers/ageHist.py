@@ -24,23 +24,16 @@ async def getMetroAgeHistData(
             }
         )
 
-    match ageHistType:
-        case AgeHistDataTypes.elected:
-            collection_name = f"지선-당선_{year}_1level_{method}"
-        case AgeHistDataTypes.candidate:
-            collection_name = f"지선-후보_{year}_1level_{method}"
-
-    if collection_name not in await MongoDB.client.age_hist_db.list_collection_names():
-        return BasicResponse.ErrorResponse.model_validate(
-            {
-                "error": "CollectionNotExistError",
-                "code": BasicResponse.COLLECTION_NOT_EXIST_ERR,
-                "message": f"No collection with name f{collection_name}. Perhaps the year is wrong?",
-            }
-        )
-
-    histogram = await MongoDB.client.age_hist_db[collection_name].find_one(
-        {"metroId": metroId}
+    histogram = await MongoDB.client.stats_db["age_hist"].find_one(
+        {
+            "level": 1,
+            "councilorType": (
+                "elected" if ageHistType == AgeHistDataTypes.elected else "candidate"
+            ),
+            "year": year,
+            "method": method,
+            "metroId": metroId,
+        }
     )
 
     return MetroAgeHistData.model_validate(
@@ -70,23 +63,17 @@ async def getLocalAgeHistData(
             }
         )
 
-    match ageHistType:
-        case AgeHistDataTypes.elected:
-            collection_name = f"지선-당선_{year}_2level_{method}"
-        case AgeHistDataTypes.candidate:
-            collection_name = f"지선-후보_{year}_2level_{method}"
-
-    if collection_name not in await MongoDB.client.age_hist_db.list_collection_names():
-        return BasicResponse.ErrorResponse.model_validate(
-            {
-                "error": "CollectionNotExistError",
-                "code": BasicResponse.COLLECTION_NOT_EXIST_ERR,
-                "message": f"No collection with name f{collection_name}. Perhaps the year is wrong?",
-            }
-        )
-
-    histogram = await MongoDB.client.age_hist_db[collection_name].find_one(
-        {"metroId": metroId, "localId": localId}
+    histogram = await MongoDB.client.stats_db["age_hist"].find_one(
+        {
+            "level": 2,
+            "councilorType": (
+                "elected" if ageHistType == AgeHistDataTypes.elected else "candidate"
+            ),
+            "year": year,
+            "method": method,
+            "metroId": metroId,
+            "localId": localId,
+        }
     )
 
     return MetroAgeHistData.model_validate(

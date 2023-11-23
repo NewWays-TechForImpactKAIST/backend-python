@@ -20,8 +20,8 @@ app = FastAPI(lifespan=initMongo, responses={404: {"description": "Not found"}})
 
 origin = [
     "http://localhost:5173",
-    "https://diversity.tech4impact.kr/",
-    "https://*.netlify.app/",
+    "https://diversity.tech4impact.kr",
+    "https://*.netlify.app",
 ]
 
 app.add_middleware(

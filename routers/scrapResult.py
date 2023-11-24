@@ -66,6 +66,40 @@ async def getLocalTemplateData(
             all_indices.sort(key=lambda x: x["ageDiversityRank"])
 
             # ============================
+            #    indexHistoryParagraph
+            # ============================
+            years = list(
+                {doc["year"] async for doc in client.stats_db["age_hist"].find()}
+            )
+            years.sort()
+            history_candidate = [
+                await client.stats_db["age_hist"].find_one(
+                    {
+                        "year": year,
+                        "level": 2,
+                        "councilorType": "candidate",
+                        "method": "equal",
+                        "metroId": metroId,
+                        "localId": localId,
+                    }
+                )
+                for year in years
+            ]
+            history_elected = [
+                await client.stats_db["age_hist"].find_one(
+                    {
+                        "year": year,
+                        "level": 2,
+                        "councilorType": "elected",
+                        "method": "equal",
+                        "metroId": metroId,
+                        "localId": localId,
+                    }
+                )
+                for year in years
+            ]
+
+            # ============================
             #    ageHistogramParagraph
             # ============================
             age_stat_elected = (
@@ -141,26 +175,29 @@ async def getLocalTemplateData(
                         ],
                     },
                     "indexHistoryParagraph": {
-                        "mostRecentYear": 2022,
+                        "mostRecentYear": years[-1],
                         "history": [
                             {
-                                "year": 2022,
-                                "unit": 8,
-                                "candidateCount": 80,
-                                "candidateDiversityIndex": 0.11,
-                                "candidateDiversityRank": 33,
-                                "electedDiversityIndex": 0.42,
-                                "electedDiversityRank": 12,
-                            },
-                            {
-                                "year": 2018,
-                                "unit": 7,
-                                "candidateCount": 70,
-                                "candidateDiversityIndex": 0.73,
-                                "candidateDiversityRank": 3,
-                                "electedDiversityIndex": 0.85,
-                                "electedDiversityRank": 2,
-                            },
+                                "year": year,
+                                "unit": (year - 1998) / 4 + 2,
+                                "candidateCount": sum(
+                                    group["count"]
+                                    for group in history_candidate[idx]["data"]
+                                ),
+                                "candidateDiversityIndex": history_candidate[idx][
+                                    "diversityIndex"
+                                ],
+                                "candidateDiversityRank": history_candidate[idx][
+                                    "diversityRank"
+                                ],
+                                "electedDiversityIndex": history_elected[idx][
+                                    "diversityIndex"
+                                ],
+                                "electedDiversityRank": history_elected[idx][
+                                    "diversityRank"
+                                ],
+                            }
+                            for idx, year in enumerate(years)
                         ],
                     },
                     "ageHistogramParagraph": {

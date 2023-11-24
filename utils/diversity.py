@@ -23,6 +23,8 @@ def gini_simpson(data, stair=0, opts=True):
 
     if opts:
         num_cats = len([c for c in counts.values() if c > 0])
+        if num_cats <= 1:
+            return 0.0
         max_gs_idx = (num_cats - 1) / num_cats * total / (total - 1)
         gs_idx /= max_gs_idx
 

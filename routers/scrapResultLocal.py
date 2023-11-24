@@ -2,15 +2,17 @@ from typing import TypeVar
 from fastapi import APIRouter
 from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
 from model.MongoDB import client
-from model.ScrapResult import (
-    GenderTemplateData,
+from model.ScrapResultCommon import (
     GenderChartDataPoint,
-    AgeTemplateData,
     AgeChartDataPoint,
-    PartyTemplateData,
     PartyChartDataPoint,
     FactorType,
     ChartData,
+)
+from model.ScrapResultLocal import (
+    GenderTemplateDataLocal,
+    AgeTemplateDataLocal,
+    PartyTemplateDataLocal,
 )
 from utils import diversity
 
@@ -23,7 +25,7 @@ AGE_STAIR = 10
 @router.get("/template-data/{metroId}/{localId}")
 async def getLocalTemplateData(
     metroId: int, localId: int, factor: FactorType
-) -> ErrorResponse | GenderTemplateData | AgeTemplateData | PartyTemplateData:
+) -> ErrorResponse | GenderTemplateDataLocal | AgeTemplateDataLocal | PartyTemplateDataLocal:
     if (
         await client.district_db["local_district"].find_one(
             {"localId": localId, "metroId": metroId}
@@ -42,7 +44,7 @@ async def getLocalTemplateData(
 
     match factor:
         case FactorType.gender:
-            return GenderTemplateData.model_validate(
+            return GenderTemplateDataLocal.model_validate(
                 {"genderDiversityIndex": local_stat["genderDiversityIndex"]}
             )
 
@@ -133,7 +135,7 @@ async def getLocalTemplateData(
 
             divArea_id = (
                 await client.stats_db["diversity_index"].find_one(
-                    {"ageDiversityRank": 1}
+                    {"localId": {"$exists": True}, "ageDiversityRank": 1}
                 )
             )["localId"]
             divArea = await client.stats_db["age_stat"].find_one(
@@ -147,7 +149,7 @@ async def getLocalTemplateData(
 
             uniArea_id = (
                 await client.stats_db["diversity_index"].find_one(
-                    {"ageDiversityRank": 226}
+                    {"localId": {"$exists": True}, "ageDiversityRank": 226}
                 )
             )["localId"]
             uniArea = await client.stats_db["age_stat"].find_one(
@@ -159,7 +161,7 @@ async def getLocalTemplateData(
                 }
             )
 
-            return AgeTemplateData.model_validate(
+            return AgeTemplateDataLocal.model_validate(
                 {
                     "metroId": metroId,
                     "localId": localId,
@@ -222,7 +224,7 @@ async def getLocalTemplateData(
 
         case FactorType.party:
             party_diversity_index = local_stat["partyDiversityIndex"]
-            return PartyTemplateData.model_validate(
+            return PartyTemplateDataLocal.model_validate(
                 {"partyDiversityIndex": party_diversity_index}
             )
 

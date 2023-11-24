@@ -3,7 +3,7 @@ from model import BasicResponse, MongoDB
 from model.AgeHist import AgeHistDataTypes, AgeHistMethodTypes, MetroAgeHistData
 
 
-router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
+router = APIRouter()
 
 
 @router.get("/age-hist/{metroId}")

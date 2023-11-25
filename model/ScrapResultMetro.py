@@ -11,7 +11,7 @@ class GenderTemplateDataMetro(BaseModel):
 class AgeTemplateDataMetro(BaseModel):
     class AgeRankingParagraphData(BaseModel):
         class AgeRankingAllIndices(BaseModel):
-            localId: int
+            metroId: int
             rank: int
             ageDiversityIndex: float
 
@@ -33,7 +33,7 @@ class AgeTemplateDataMetro(BaseModel):
 
     class AgeHistogramParagraphData(BaseModel):
         class AgeHistogramAreaData(BaseModel):
-            localId: int
+            metroId: int
             firstQuintile: int
             lastQuintile: int
 
@@ -46,7 +46,6 @@ class AgeTemplateDataMetro(BaseModel):
         uniArea: AgeHistogramAreaData
 
     metroId: int
-    localId: int
     rankingParagraph: AgeRankingParagraphData
     indexHistoryParagraph: AgeIndexHistoryParagraphData
     ageHistogramParagraph: AgeHistogramParagraphData

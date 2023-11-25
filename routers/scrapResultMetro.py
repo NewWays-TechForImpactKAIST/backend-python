@@ -129,7 +129,7 @@ async def getMetroTemplateData(
                 await client.stats_db["diversity_index"].find_one(
                     {"metroId": {"$exists": True}, "ageDiversityRank": 1}
                 )
-            )["localId"]
+            )["metroId"]
             divArea = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 1,
@@ -141,7 +141,8 @@ async def getMetroTemplateData(
 
             uniArea_id = (
                 await client.stats_db["diversity_index"].find_one(
-                    {"metroId": {"$exists": True}, "ageDiversityRank": 17}
+                    # {"metroId": {"$exists": True}, "ageDiversityRank": 17}
+                    {"metroId": {"$exists": True}, "ageDiversityRank": 15}
                 )
             )["metroId"]
             uniArea = await client.stats_db["age_stat"].find_one(

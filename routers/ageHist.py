@@ -3,10 +3,26 @@ from model import BasicResponse, MongoDB
 from model.AgeHist import AgeHistDataTypes, AgeHistMethodTypes, MetroAgeHistData
 
 
-router = APIRouter()
+router = APIRouter(prefix="/age-hist", tags=["age-hist"])
 
 
-@router.get("/age-hist/{metroId}")
+@router.get("/")
+async def getNationalAgeHistData(
+    ageHistType: AgeHistDataTypes, year: int, method: AgeHistMethodTypes
+) -> BasicResponse.ErrorResponse | MetroAgeHistData:
+    histogram = await MongoDB.client.stats_db["age_hist"].find_one(
+        {
+            "councilorType": "national_councilor",
+            "is_elected": ageHistType == AgeHistDataTypes.elected,
+            "year": year,
+            "method": method,
+        }
+    )
+
+    return MetroAgeHistData.model_validate({"data": histogram["data"]})
+
+
+@router.get("/{metroId}")
 async def getMetroAgeHistData(
     metroId: int, ageHistType: AgeHistDataTypes, year: int, method: AgeHistMethodTypes
 ) -> BasicResponse.ErrorResponse | MetroAgeHistData:
@@ -40,7 +56,7 @@ async def getMetroAgeHistData(
     )
 
 
-@router.get("/age-hist/{metroId}/{localId}")
+@router.get("/{metroId}/{localId}")
 async def getLocalAgeHistData(
     metroId: int,
     localId: int,

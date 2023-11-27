@@ -1,6 +1,6 @@
 from typing import TypeVar
 from fastapi import APIRouter
-from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
+from model.BasicResponse import ErrorResponse, REGION_CODE_ERR, NO_DATA_ERROR_RESPONSE
 from model.MongoDB import client
 from model.ScrapResultCommon import (
     GenderChartDataPoint,
@@ -42,10 +42,36 @@ async def getLocalTemplateData(
 
     local_stat = await client.stats_db["diversity_index"].find_one({"localId": localId})
 
+    if local_stat is None:
+        return NO_DATA_ERROR_RESPONSE
+
     match factor:
         case FactorType.gender:
+            councilors = (
+                await client.council_db["local_councilor"]
+                .find({"metroId": metroId, "localId": localId})
+                .to_list(500)
+            )
+            gender_list = [councilor["gender"] for councilor in councilors]
+            gender_count = diversity.count(gender_list)
             return GenderTemplateDataLocal.model_validate(
-                {"genderDiversityIndex": local_stat["genderDiversityIndex"]}
+                {
+                    "metroId": metroId,
+                    "localId": localId,
+                    "genderDiversityIndex": local_stat["genderDiversityIndex"],
+                    "current": {
+                        "year": 2022,
+                        "malePop": gender_count["남"],
+                        "femalePop": gender_count["여"],
+                    },
+                    "prev": {
+                        "year": 0,
+                        "malePop": 0,
+                        "femalePop": 0,
+                    },
+                    "meanMalePop": 0.0,
+                    "meanFemalePop": 0.0,
+                }
             )
 
         case FactorType.age:
@@ -238,8 +264,40 @@ async def getLocalTemplateData(
 
         case FactorType.party:
             party_diversity_index = local_stat["partyDiversityIndex"]
+            councilors = (
+                await client.council_db["local_councilor"]
+                .find({"metroId": metroId, "localId": localId})
+                .to_list(500)
+            )
+            party_list = [councilor["jdName"] for councilor in councilors]
+            party_count = diversity.count(party_list)
+
+            candidates = (
+                await client.council_db["local_councilor_candidate"]
+                .find({"metroId": metroId, "localId": localId})
+                .to_list(500)
+            )
+            candidate_party_list = [candidate["jdName"] for candidate in candidates]
+            candidate_party_count = diversity.count(candidate_party_list)
             return PartyTemplateDataLocal.model_validate(
-                {"partyDiversityIndex": party_diversity_index}
+                {
+                    "metroId": metroId,
+                    "localId": localId,
+                    "partyDiversityIndex": party_diversity_index,
+                    "prevElected": [
+                        {"party": "포도당", "count": 6},
+                        {"party": "유당", "count": 6},
+                        {"party": "과당", "count": 5},
+                    ],
+                    "currentElected": [
+                        {"party": party, "count": party_count[party]}
+                        for party in party_count
+                    ],
+                    "currentCandidate": [
+                        {"party": party, "count": candidate_party_count[party]}
+                        for party in candidate_party_count
+                    ],
+                }
             )
 
 
@@ -269,11 +327,18 @@ async def getLocalChartData(
             }
         )
 
-    councilors = client.council_db["local_councilor"].find({"localId": localId})
+    councilors = (
+        await client.council_db["local_councilor"]
+        .find({"localId": localId})
+        .to_list(5000)
+    )
+
+    if councilors is None or len(councilors) == 0:
+        return NO_DATA_ERROR_RESPONSE
 
     match factor:
         case FactorType.gender:
-            gender_list = [councilor["gender"] async for councilor in councilors]
+            gender_list = [councilor["gender"] for councilor in councilors]
             gender_count = diversity.count(gender_list)
             return ChartData[GenderChartDataPoint].model_validate(
                 {
@@ -285,7 +350,7 @@ async def getLocalChartData(
             )
 
         case FactorType.age:
-            age_list = [councilor["age"] async for councilor in councilors]
+            age_list = [councilor["age"] for councilor in councilors]
             age_count = diversity.count(age_list, stair=AGE_STAIR)
             return ChartData[AgeChartDataPoint].model_validate(
                 {
@@ -301,7 +366,7 @@ async def getLocalChartData(
             )
 
         case FactorType.party:
-            party_list = [councilor["jdName"] async for councilor in councilors]
+            party_list = [councilor["jdName"] for councilor in councilors]
             party_count = diversity.count(party_list)
             return ChartData[PartyChartDataPoint].model_validate(
                 {

@@ -1,6 +1,6 @@
 from typing import TypeVar
 from fastapi import APIRouter
-from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
+from model.BasicResponse import ErrorResponse, NO_DATA_ERROR_RESPONSE
 from model.MongoDB import client
 from model.ScrapResultCommon import (
     GenderChartDataPoint,
@@ -29,11 +29,32 @@ async def getNationalTemplateData(
     national_stat = await client.stats_db["diversity_index"].find_one(
         {"national": True}
     )
+    if national_stat is None:
+        return NO_DATA_ERROR_RESPONSE
 
     match factor:
         case FactorType.gender:
+            councilors = (
+                await client.council_db["national_councilor"].find().to_list(500)
+            ) + (
+                await client.council_db["national_councilor_global"].find().to_list(500)
+            )
+            gender_list = [councilor["gender"] for councilor in councilors]
+            gender_count = diversity.count(gender_list)
             return GenderTemplateDataNational.model_validate(
-                {"genderDiversityIndex": national_stat["genderDiversityIndex"]}
+                {
+                    "genderDiversityIndex": national_stat["genderDiversityIndex"],
+                    "current": {
+                        "year": 2022,
+                        "malePop": gender_count["남"],
+                        "femalePop": gender_count["여"],
+                    },
+                    "prev": {
+                        "year": 0,
+                        "malePop": 0,
+                        "femalePop": 0,
+                    },
+                }
             )
 
         case FactorType.age:
@@ -80,31 +101,31 @@ async def getNationalTemplateData(
             # ============================
             #    ageHistogramParagraph
             # ============================
-            age_stat_elected = (
-                await client.stats_db["age_stat"]
-                .aggregate(
-                    [
-                        {
-                            "$match": {
-                                "level": 2,
-                                "councilorType": "national_councilor",
-                                "is_elected": True,
-                            }
-                        },
-                        {"$sort": {"year": -1}},
-                        {"$limit": 1},
-                    ]
-                )
-                .to_list(500)
-            )[0]
-            most_recent_year = age_stat_elected["year"]
-            age_stat_candidate = await client.stats_db["age_stat"].find_one(
-                {
-                    "councilorType": "national_councilor",
-                    "is_elected": False,
-                    "year": most_recent_year,
-                }
-            )
+            # age_stat_elected = (
+            #     await client.stats_db["age_stat"]
+            #     .aggregate(
+            #         [
+            #             {
+            #                 "$match": {
+            #                     "level": 2,
+            #                     "councilorType": "national_councilor",
+            #                     "is_elected": True,
+            #                 }
+            #             },
+            #             {"$sort": {"year": -1}},
+            #             {"$limit": 1},
+            #         ]
+            #     )
+            #     .to_list(500)
+            # )[0]
+            # most_recent_year = age_stat_elected["year"]
+            # age_stat_candidate = await client.stats_db["age_stat"].find_one(
+            #     {
+            #         "councilorType": "national_councilor",
+            #         "is_elected": False,
+            #         "year": most_recent_year,
+            #     }
+            # )
 
             return AgeTemplateDataNational.model_validate(
                 {
@@ -112,7 +133,8 @@ async def getNationalTemplateData(
                         "ageDiversityIndex": age_diversity_index,
                     },
                     "indexHistoryParagraph": {
-                        "mostRecentYear": years[-1],
+                        # "mostRecentYear": years[-1],
+                        "mostRecentYear": 2022,
                         "history": [
                             {
                                 "year": year,
@@ -140,20 +162,51 @@ async def getNationalTemplateData(
                             for idx, year in enumerate(years)
                         ],
                     },
+                    # "ageHistogramParagraph": {
+                    #     "year": most_recent_year,
+                    #     "candidateCount": age_stat_candidate["data"][0]["population"],
+                    #     "electedCount": age_stat_elected["data"][0]["population"],
+                    #     "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
+                    #     "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
+                    # },
                     "ageHistogramParagraph": {
-                        "year": most_recent_year,
-                        "candidateCount": age_stat_candidate["data"][0]["population"],
-                        "electedCount": age_stat_elected["data"][0]["population"],
-                        "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
-                        "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
+                        "year": 2022,
+                        "candidateCount": 99999,
+                        "electedCount": 88888,
+                        "firstQuintile": 98,
+                        "lastQuintile": 18,
                     },
                 }
             )
 
         case FactorType.party:
             party_diversity_index = national_stat["partyDiversityIndex"]
+            councilors = (
+                await client.council_db["national_councilor"].find().to_list(500)
+            ) + (
+                await client.council_db["national_councilor_global"].find().to_list(500)
+            )
+            party_list = [councilor["jdName"] for councilor in councilors]
+            party_count = diversity.count(party_list)
+
             return PartyTemplateDataNational.model_validate(
-                {"partyDiversityIndex": party_diversity_index}
+                {
+                    "partyDiversityIndex": party_diversity_index,
+                    "prevElected": [
+                        {"party": "포도당", "count": 6},
+                        {"party": "유당", "count": 6},
+                        {"party": "과당", "count": 5},
+                    ],
+                    "currentElected": [
+                        {"party": party, "count": party_count[party]}
+                        for party in party_count
+                    ],
+                    "currentCandidate": [
+                        {"party": "포도당", "count": 6},
+                        {"party": "유당", "count": 6},
+                        {"party": "과당", "count": 5},
+                    ],
+                }
             )
 
 

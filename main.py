@@ -1,6 +1,12 @@
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
-from routers import commonInfo, ageHist, scrapResultLocal, scrapResultMetro
+from routers import (
+    commonInfo,
+    ageHist,
+    scrapResultLocal,
+    scrapResultMetro,
+    scrapResultNational,
+)
 from contextlib import asynccontextmanager
 from typing import Dict
 from model import MongoDB
@@ -35,5 +41,6 @@ app.add_middleware(
 
 app.include_router(scrapResultLocal.router)
 app.include_router(scrapResultMetro.router)
+app.include_router(scrapResultNational.router)
 app.include_router(commonInfo.router)
 app.include_router(ageHist.router)

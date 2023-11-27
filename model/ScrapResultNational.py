@@ -5,7 +5,14 @@ from pydantic import BaseModel
 # =            Template Data Types             =
 # ==============================================
 class GenderTemplateDataNational(BaseModel):
+    class GenderTemplateDataPoint(BaseModel):
+        year: int
+        malePop: int
+        femalePop: int
+
     genderDiversityIndex: float
+    current: GenderTemplateDataPoint
+    prev: GenderTemplateDataPoint
 
 
 class AgeTemplateDataNational(BaseModel):
@@ -38,4 +45,11 @@ class AgeTemplateDataNational(BaseModel):
 
 
 class PartyTemplateDataNational(BaseModel):
+    class PartyCountDataPoint(BaseModel):
+        party: str
+        count: int
+
     partyDiversityIndex: float
+    prevElected: list[PartyCountDataPoint]
+    currentElected: list[PartyCountDataPoint]
+    currentCandidate: list[PartyCountDataPoint]

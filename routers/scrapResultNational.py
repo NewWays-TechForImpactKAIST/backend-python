@@ -9,63 +9,38 @@ from model.ScrapResultCommon import (
     FactorType,
     ChartData,
 )
-from model.ScrapResultLocal import (
-    GenderTemplateDataLocal,
-    AgeTemplateDataLocal,
-    PartyTemplateDataLocal,
+from model.ScrapResultNational import (
+    GenderTemplateDataNational,
+    AgeTemplateDataNational,
+    PartyTemplateDataNational,
 )
 from utils import diversity
 
 
-router = APIRouter(prefix="/localCouncil", tags=["localCouncil"])
+router = APIRouter(prefix="/nationalCouncil", tags=["nationalCouncil"])
 
 AGE_STAIR = 10
 
 
-@router.get("/template-data/{metroId}/{localId}")
-async def getLocalTemplateData(
-    metroId: int, localId: int, factor: FactorType
-) -> ErrorResponse | GenderTemplateDataLocal | AgeTemplateDataLocal | PartyTemplateDataLocal:
-    if (
-        await client.district_db["local_district"].find_one(
-            {"localId": localId, "metroId": metroId}
-        )
-        is None
-    ):
-        return ErrorResponse.model_validate(
-            {
-                "error": "RegionCodeError",
-                "code": REGION_CODE_ERR,
-                "message": f"No local district with metroId {metroId} and localId {localId}.",
-            }
-        )
-
-    local_stat = await client.stats_db["diversity_index"].find_one({"localId": localId})
+@router.get("/template-data")
+async def getNationalTemplateData(
+    factor: FactorType,
+) -> ErrorResponse | GenderTemplateDataNational | AgeTemplateDataNational | PartyTemplateDataNational:
+    national_stat = await client.stats_db["diversity_index"].find_one(
+        {"national": True}
+    )
 
     match factor:
         case FactorType.gender:
-            return GenderTemplateDataLocal.model_validate(
-                {"genderDiversityIndex": local_stat["genderDiversityIndex"]}
+            return GenderTemplateDataNational.model_validate(
+                {"genderDiversityIndex": national_stat["genderDiversityIndex"]}
             )
 
         case FactorType.age:
             # ============================
             #      rankingParagraph
             # ============================
-            age_diversity_index = local_stat["ageDiversityIndex"]
-
-            localIds_of_same_metroId = [
-                doc["localId"]
-                async for doc in client.district_db["local_district"].find(
-                    {"metroId": metroId}
-                )
-            ]
-            all_indices = (
-                await client.stats_db["diversity_index"]
-                .find({"localId": {"$in": localIds_of_same_metroId}})
-                .to_list(500)
-            )
-            all_indices.sort(key=lambda x: x["ageDiversityRank"])
+            age_diversity_index = national_stat["ageDiversityIndex"]
 
             # ============================
             #    indexHistoryParagraph
@@ -74,7 +49,7 @@ async def getLocalTemplateData(
                 {
                     doc["year"]
                     async for doc in client.stats_db["age_hist"].find(
-                        {"councilorType": "local_councilor"}
+                        {"councilorType": "national_councilor"}
                     )
                 }
             )
@@ -83,12 +58,9 @@ async def getLocalTemplateData(
                 await client.stats_db["age_hist"].find_one(
                     {
                         "year": year,
-                        "level": 2,
-                        "councilorType": "local_councilor",
+                        "councilorType": "national_councilor",
                         "is_elected": False,
                         "method": "equal",
-                        "metroId": metroId,
-                        "localId": localId,
                     }
                 )
                 for year in years
@@ -97,12 +69,9 @@ async def getLocalTemplateData(
                 await client.stats_db["age_hist"].find_one(
                     {
                         "year": year,
-                        "level": 2,
-                        "councilorType": "local_councilor",
+                        "councilorType": "national_councilor",
                         "is_elected": True,
                         "method": "equal",
-                        "metroId": metroId,
-                        "localId": localId,
                     }
                 )
                 for year in years
@@ -118,10 +87,8 @@ async def getLocalTemplateData(
                         {
                             "$match": {
                                 "level": 2,
-                                "councilorType": "local_councilor",
+                                "councilorType": "national_councilor",
                                 "is_elected": True,
-                                "metroId": metroId,
-                                "localId": localId,
                             }
                         },
                         {"$sort": {"year": -1}},
@@ -133,66 +100,23 @@ async def getLocalTemplateData(
             most_recent_year = age_stat_elected["year"]
             age_stat_candidate = await client.stats_db["age_stat"].find_one(
                 {
-                    "level": 2,
-                    "councilorType": "local_councilor",
+                    "councilorType": "national_councilor",
                     "is_elected": False,
-                    "metroId": metroId,
-                    "localId": localId,
                     "year": most_recent_year,
                 }
             )
 
-            divArea_id = (
-                await client.stats_db["diversity_index"].find_one(
-                    {"localId": {"$exists": True}, "ageDiversityRank": 1}
-                )
-            )["localId"]
-            divArea = await client.stats_db["age_stat"].find_one(
+            return AgeTemplateDataNational.model_validate(
                 {
-                    "level": 2,
-                    "councilorType": "local_councilor",
-                    "is_elected": True,
-                    "localId": divArea_id,
-                    "year": most_recent_year,
-                }
-            )
-
-            uniArea_id = (
-                await client.stats_db["diversity_index"].find_one(
-                    {"localId": {"$exists": True}, "ageDiversityRank": 226}
-                )
-            )["localId"]
-            uniArea = await client.stats_db["age_stat"].find_one(
-                {
-                    "level": 2,
-                    "councilorType": "local_councilor",
-                    "is_elected": True,
-                    "localId": uniArea_id,
-                    "year": most_recent_year,
-                }
-            )
-
-            return AgeTemplateDataLocal.model_validate(
-                {
-                    "metroId": metroId,
-                    "localId": localId,
                     "rankingParagraph": {
                         "ageDiversityIndex": age_diversity_index,
-                        "allIndices": [
-                            {
-                                "localId": doc["localId"],
-                                "rank": idx + 1,
-                                "ageDiversityIndex": doc["ageDiversityIndex"],
-                            }
-                            for idx, doc in enumerate(all_indices)
-                        ],
                     },
                     "indexHistoryParagraph": {
                         "mostRecentYear": years[-1],
                         "history": [
                             {
                                 "year": year,
-                                "unit": (year - 1998) / 4 + 2,
+                                "unit": (year - 2000) / 4 + 2,
                                 "candidateCount": sum(
                                     group["count"]
                                     for group in history_candidate[idx]["data"]
@@ -222,23 +146,13 @@ async def getLocalTemplateData(
                         "electedCount": age_stat_elected["data"][0]["population"],
                         "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
                         "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
-                        "divArea": {
-                            "localId": divArea_id,
-                            "firstQuintile": divArea["data"][0]["firstquintile"],
-                            "lastQuintile": divArea["data"][0]["lastquintile"],
-                        },
-                        "uniArea": {
-                            "localId": uniArea_id,
-                            "firstQuintile": uniArea["data"][0]["firstquintile"],
-                            "lastQuintile": uniArea["data"][0]["lastquintile"],
-                        },
                     },
                 }
             )
 
         case FactorType.party:
-            party_diversity_index = local_stat["partyDiversityIndex"]
-            return PartyTemplateDataLocal.model_validate(
+            party_diversity_index = national_stat["partyDiversityIndex"]
+            return PartyTemplateDataNational.model_validate(
                 {"partyDiversityIndex": party_diversity_index}
             )
 
@@ -251,25 +165,9 @@ T = TypeVar(
 )
 
 
-@router.get("/chart-data/{metroId}/{localId}")
-async def getLocalChartData(
-    metroId: int, localId: int, factor: FactorType
-) -> ErrorResponse | ChartData[T]:
-    if (
-        await client.district_db["local_district"].find_one(
-            {"localId": localId, "metroId": metroId}
-        )
-        is None
-    ):
-        return ErrorResponse.model_validate(
-            {
-                "error": "RegionCodeError",
-                "code": REGION_CODE_ERR,
-                "message": f"No local district with metroId {metroId} and localId {localId}.",
-            }
-        )
-
-    councilors = client.council_db["local_councilor"].find({"localId": localId})
+@router.get("/chart-data")
+async def getNationalChartData(factor: FactorType) -> ErrorResponse | ChartData[T]:
+    councilors = client.council_db["national_councilor"].find()
 
     match factor:
         case FactorType.gender:

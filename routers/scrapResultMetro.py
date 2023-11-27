@@ -67,7 +67,12 @@ async def getMetroTemplateData(
             #    indexHistoryParagraph
             # ============================
             years = list(
-                {doc["year"] async for doc in client.stats_db["age_hist"].find()}
+                {
+                    doc["year"]
+                    async for doc in client.stats_db["age_hist"].find(
+                        {"councilorType": "metro_councilor"}
+                    )
+                }
             )
             years.sort()
             history_candidate = [

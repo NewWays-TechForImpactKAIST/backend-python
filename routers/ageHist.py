@@ -27,9 +27,8 @@ async def getMetroAgeHistData(
     histogram = await MongoDB.client.stats_db["age_hist"].find_one(
         {
             "level": 1,
-            "councilorType": (
-                "elected" if ageHistType == AgeHistDataTypes.elected else "candidate"
-            ),
+            "councilorType": "metro_councilor",
+            "is_elected": ageHistType == AgeHistDataTypes.elected,
             "year": year,
             "method": method,
             "metroId": metroId,
@@ -66,9 +65,8 @@ async def getLocalAgeHistData(
     histogram = await MongoDB.client.stats_db["age_hist"].find_one(
         {
             "level": 2,
-            "councilorType": (
-                "elected" if ageHistType == AgeHistDataTypes.elected else "candidate"
-            ),
+            "councilorType": "local_councilor",
+            "is_elected": ageHistType == AgeHistDataTypes.elected,
             "year": year,
             "method": method,
             "metroId": metroId,

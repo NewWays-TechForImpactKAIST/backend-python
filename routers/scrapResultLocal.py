@@ -79,7 +79,8 @@ async def getLocalTemplateData(
                     {
                         "year": year,
                         "level": 2,
-                        "councilorType": "candidate",
+                        "councilorType": "local_councilor",
+                        "is_elected": False,
                         "method": "equal",
                         "metroId": metroId,
                         "localId": localId,
@@ -92,7 +93,8 @@ async def getLocalTemplateData(
                     {
                         "year": year,
                         "level": 2,
-                        "councilorType": "elected",
+                        "councilorType": "local_councilor",
+                        "is_elected": True,
                         "method": "equal",
                         "metroId": metroId,
                         "localId": localId,
@@ -111,7 +113,8 @@ async def getLocalTemplateData(
                         {
                             "$match": {
                                 "level": 2,
-                                "councilorType": "elected",
+                                "councilorType": "local_councilor",
+                                "is_elected": True,
                                 "metroId": metroId,
                                 "localId": localId,
                             }
@@ -126,7 +129,8 @@ async def getLocalTemplateData(
             age_stat_candidate = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 2,
-                    "councilorType": "candidate",
+                    "councilorType": "local_councilor",
+                    "is_elected": False,
                     "metroId": metroId,
                     "localId": localId,
                     "year": most_recent_year,
@@ -141,7 +145,8 @@ async def getLocalTemplateData(
             divArea = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 2,
-                    "councilorType": "elected",
+                    "councilorType": "local_councilor",
+                    "is_elected": True,
                     "localId": divArea_id,
                     "year": most_recent_year,
                 }
@@ -155,7 +160,8 @@ async def getLocalTemplateData(
             uniArea = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 2,
-                    "councilorType": "elected",
+                    "councilorType": "local_councilor",
+                    "is_elected": True,
                     "localId": uniArea_id,
                     "year": most_recent_year,
                 }
@@ -186,12 +192,15 @@ async def getLocalTemplateData(
                                     group["count"]
                                     for group in history_candidate[idx]["data"]
                                 ),
+                                # "candidateCount": 0,
                                 "candidateDiversityIndex": history_candidate[idx][
                                     "diversityIndex"
                                 ],
                                 "candidateDiversityRank": history_candidate[idx][
                                     "diversityRank"
                                 ],
+                                # "candidateDiversityIndex": 0.0,
+                                # "candidateDiversityRank": 0,
                                 "electedDiversityIndex": history_elected[idx][
                                     "diversityIndex"
                                 ],

@@ -75,7 +75,8 @@ async def getMetroTemplateData(
                     {
                         "year": year,
                         "level": 1,
-                        "councilorType": "candidate",
+                        "councilorType": "metro_councilor",
+                        "is_elected": False,
                         "method": "equal",
                         "metroId": metroId,
                     }
@@ -87,7 +88,8 @@ async def getMetroTemplateData(
                     {
                         "year": year,
                         "level": 1,
-                        "councilorType": "elected",
+                        "councilorType": "metro_councilor",
+                        "is_elected": True,
                         "method": "equal",
                         "metroId": metroId,
                     }
@@ -105,7 +107,8 @@ async def getMetroTemplateData(
                         {
                             "$match": {
                                 "level": 1,
-                                "councilorType": "elected",
+                                "councilorType": "metro_councilor",
+                                "is_elected": True,
                                 "metroId": metroId,
                             }
                         },
@@ -119,7 +122,8 @@ async def getMetroTemplateData(
             age_stat_candidate = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 1,
-                    "councilorType": "candidate",
+                    "councilorType": "metro_councilor",
+                    "is_elected": False,
                     "metroId": metroId,
                     "year": most_recent_year,
                 }
@@ -133,7 +137,8 @@ async def getMetroTemplateData(
             divArea = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 1,
-                    "councilorType": "elected",
+                    "councilorType": "metro_councilor",
+                    "is_elected": True,
                     "metroId": divArea_id,
                     "year": most_recent_year,
                 }
@@ -148,7 +153,8 @@ async def getMetroTemplateData(
             uniArea = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 1,
-                    "councilorType": "elected",
+                    "councilorType": "metro_councilor",
+                    "is_elected": True,
                     "metroId": uniArea_id,
                     "year": most_recent_year,
                 }

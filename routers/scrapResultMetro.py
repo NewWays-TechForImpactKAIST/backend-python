@@ -42,29 +42,87 @@ async def getMetroTemplateData(
 
     match factor:
         case FactorType.gender:
-            councilors = (
-                await client.council_db["metro_councilor"]
-                .find({"metroId": metroId})
+            years = list(
+                {
+                    doc["year"]
+                    async for doc in client.stats_db["gender_hist"].find(
+                        {
+                            "councilorType": "metro_councilor",
+                            "level": 1,
+                            "is_elected": True,
+                            "metroId": metroId,
+                        }
+                    )
+                }
+            )
+            years.sort()
+            assert len(years) >= 2
+
+            current = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": True,
+                    "metroId": metroId,
+                    "year": years[-1],
+                }
+            )
+
+            previous = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": True,
+                    "metroId": metroId,
+                    "year": years[-2],
+                }
+            )
+
+            current_all = (
+                await client.stats_db["gender_hist"]
+                .aggregate(
+                    [
+                        {
+                            "$match": {
+                                "councilorType": "metro_councilor",
+                                "level": 1,
+                                "is_elected": True,
+                                "year": years[-1],
+                            }
+                        },
+                        {
+                            "$group": {
+                                "_id": None,
+                                "male_tot": {"$sum": "$남"},
+                                "female_tot": {"$sum": "$여"},
+                                "district_cnt": {"$sum": 1},
+                            }
+                        },
+                    ]
+                )
                 .to_list(500)
             )
-            gender_list = [councilor["gender"] for councilor in councilors]
-            gender_count = diversity.count(gender_list)
+            assert len(current_all) == 1
+            current_all = current_all[0]
+
             return GenderTemplateDataMetro.model_validate(
                 {
                     "metroId": metroId,
                     "genderDiversityIndex": metro_stat["genderDiversityIndex"],
                     "current": {
-                        "year": 2022,
-                        "malePop": gender_count["남"],
-                        "femalePop": gender_count["여"],
+                        "year": years[-1],
+                        "malePop": current["남"],
+                        "femalePop": current["여"],
                     },
                     "prev": {
-                        "year": 0,
-                        "malePop": 0,
-                        "femalePop": 0,
+                        "year": years[-2],
+                        "malePop": previous["남"],
+                        "femalePop": previous["여"],
                     },
-                    "meanMalePop": 0.0,
-                    "meanFemalePop": 0.0,
+                    "meanMalePop": current_all["male_tot"]
+                    / current_all["district_cnt"],
+                    "meanFemalePop": current_all["female_tot"]
+                    / current_all["district_cnt"],
                 }
             )
 
@@ -266,37 +324,92 @@ async def getMetroTemplateData(
 
         case FactorType.party:
             party_diversity_index = metro_stat["partyDiversityIndex"]
-            councilors = (
-                await client.council_db["metro_councilor"]
-                .find({"metroId": metroId})
-                .to_list(500)
+            years = list(
+                {
+                    doc["year"]
+                    async for doc in client.stats_db["party_hist"].find(
+                        {
+                            "councilorType": "metro_councilor",
+                            "level": 1,
+                            "is_elected": True,
+                            "metroId": metroId,
+                        }
+                    )
+                }
             )
-            party_list = [councilor["jdName"] for councilor in councilors]
-            party_count = diversity.count(party_list)
+            years.sort()
+            assert len(years) >= 2
 
-            candidates = (
-                await client.council_db["metro_councilor_candidate"]
-                .find({"metroId": metroId})
-                .to_list(500)
+            current_elected = client.stats_db["party_hist"].find(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": True,
+                    "metroId": metroId,
+                    "year": years[-1],
+                },
+                {
+                    "_id": 0,
+                    "councilorType": 0,
+                    "level": 0,
+                    "is_elected": 0,
+                    "metroId": 0,
+                    "year": 0,
+                },
             )
-            candidate_party_list = [candidate["jdName"] for candidate in candidates]
-            candidate_party_count = diversity.count(candidate_party_list)
+            current_candidate = client.stats_db["party_hist"].find(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": False,
+                    "metroId": metroId,
+                    "year": years[-1],
+                },
+                {
+                    "_id": 0,
+                    "councilorType": 0,
+                    "level": 0,
+                    "is_elected": 0,
+                    "metroId": 0,
+                    "year": 0,
+                },
+            )
+            previous = client.stats_db["party_hist"].find(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": True,
+                    "metroId": metroId,
+                    "year": years[-2],
+                },
+                {
+                    "_id": 0,
+                    "councilorType": 0,
+                    "level": 0,
+                    "is_elected": 0,
+                    "metroId": 0,
+                    "year": 0,
+                },
+            )
+
             return PartyTemplateDataMetro.model_validate(
                 {
                     "metroId": metroId,
                     "partyDiversityIndex": party_diversity_index,
                     "prevElected": [
-                        {"party": "포도당", "count": 6},
-                        {"party": "유당", "count": 6},
-                        {"party": "과당", "count": 5},
+                        {"party": party, "count": doc[party]}
+                        async for doc in previous
+                        for party in doc
                     ],
                     "currentElected": [
-                        {"party": party, "count": party_count[party]}
-                        for party in party_count
+                        {"party": party, "count": doc[party]}
+                        async for doc in current_elected
+                        for party in doc
                     ],
                     "currentCandidate": [
-                        {"party": party, "count": candidate_party_count[party]}
-                        for party in candidate_party_count
+                        {"party": party, "count": doc[party]}
+                        async for doc in current_candidate
+                        for party in doc
                     ],
                 }
             )
@@ -311,9 +424,11 @@ T = TypeVar(
 
 
 @router.get("/chart-data/{metroId}")
-async def getLocalChartData(
+async def getMetroChartData(
     metroId: int, factor: FactorType
-) -> ErrorResponse | ChartData[T]:
+) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
+    AgeChartDataPoint
+] | ChartData[PartyChartDataPoint]:
     if (
         await client.district_db["metro_district"].find_one({"metroId": metroId})
         is None
@@ -326,45 +441,110 @@ async def getLocalChartData(
             }
         )
 
-    councilors = client.council_db["metro_councilor"].find({"metroId": metroId})
-
     match factor:
         case FactorType.gender:
-            gender_list = [councilor["gender"] async for councilor in councilors]
-            gender_count = diversity.count(gender_list)
+            gender_cnt = (
+                await client.stats_db["gender_hist"]
+                .find(
+                    {
+                        "councilorType": "metro_councilor",
+                        "level": 1,
+                        "is_elected": True,
+                        "metroId": metroId,
+                    }
+                )
+                .sort({"year": -1})
+                .limit(1)
+                .to_list(5)
+            )[0]
+
             return ChartData[GenderChartDataPoint].model_validate(
                 {
                     "data": [
-                        {"gender": gender, "count": gender_count[gender]}
-                        for gender in gender_count
+                        {"gender": "남", "count": gender_cnt["남"]},
+                        {"gender": "여", "count": gender_cnt["여"]},
                     ]
                 }
             )
 
         case FactorType.age:
-            age_list = [councilor["age"] async for councilor in councilors]
-            age_count = diversity.count(age_list, stair=AGE_STAIR)
+            # age_cnt = (
+            #     await client.stats_db["age_hist"]
+            #     .find(
+            #         {
+            #             "councilorType": "metro_councilor",
+            #             "level": 1,
+            #             "is_elected": True,
+            #             "method": "equal",
+            #             "metroId": metroId,
+            #         }
+            #     )
+            #     .sort({"year": -1})
+            #     .limit(1)
+            #     .to_list(5)
+            # )[0]
+            # age_list = [
+            #     age["minAge"] for age in age_cnt["data"] for _ in range(age["count"])
+            # ]
+            # age_stair = diversity.count(age_list, stair=AGE_STAIR)
+            # return ChartData[AgeChartDataPoint].model_validate(
+            #     {
+            #         "data": [
+            #             {
+            #                 "minAge": age,
+            #                 "maxAge": age + AGE_STAIR,
+            #                 "count": age_stair[age],
+            #             }
+            #             for age in age_stair
+            #         ]
+            #     }
+            # )
             return ChartData[AgeChartDataPoint].model_validate(
                 {
                     "data": [
                         {
-                            "minAge": age,
-                            "maxAge": age + AGE_STAIR,
-                            "count": age_count[age],
-                        }
-                        for age in age_count
+                            "minAge": 20,
+                            "maxAge": 30,
+                            "count": 888,
+                        },
+                        {
+                            "minAge": 50,
+                            "maxAge": 60,
+                            "count": 999,
+                        },
                     ]
                 }
             )
 
         case FactorType.party:
-            party_list = [councilor["jdName"] async for councilor in councilors]
-            party_count = diversity.count(party_list)
+            party_count = (
+                await client.stats_db["party_hist"]
+                .find(
+                    {
+                        "councilorType": "metro_councilor",
+                        "level": 1,
+                        "is_elected": True,
+                        "metroId": metroId,
+                    }
+                )
+                .sort({"year": -1})
+                .limit(1)
+                .to_list(5)
+            )[0]
             return ChartData[PartyChartDataPoint].model_validate(
                 {
                     "data": [
                         {"party": party, "count": party_count[party]}
                         for party in party_count
+                        if party
+                        not in [
+                            "_id",
+                            "councilorType",
+                            "level",
+                            "is_elected",
+                            "metroId",
+                            "year",
+                        ]
                     ]
                 }
             )

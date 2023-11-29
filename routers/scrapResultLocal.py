@@ -436,7 +436,7 @@ async def getLocalTemplateData(
 
 @router.get("/chart-data/{metroId}/{localId}")
 async def getLocalChartData(
-    metroId: int, localId: int, factor: FactorType
+    metroId: int, localId: int, factor: FactorType, year:int = 2022
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
@@ -465,9 +465,9 @@ async def getLocalChartData(
                         "is_elected": True,
                         "localId": localId,
                         "metroId": metroId,
+                        "year": year
                     }
                 )
-                .sort({"year": -1})
                 .limit(1)
                 .to_list(5)
             )[0]
@@ -492,9 +492,9 @@ async def getLocalChartData(
                         "method": "equal",
                         "localId": localId,
                         "metroId": metroId,
+                        "year": year
                     }
                 )
-                .sort({"year": -1})
                 .limit(1)
                 .to_list(5)
             )[0]
@@ -525,9 +525,9 @@ async def getLocalChartData(
                         "is_elected": True,
                         "localId": localId,
                         "metroId": metroId,
+                        "year": year
                     }
                 )
-                .sort({"year": -1})
                 .limit(1)
                 .to_list(5)
             )[0]

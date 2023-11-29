@@ -1,6 +1,6 @@
 from typing import TypeVar
 from fastapi import APIRouter
-from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
+from model.BasicResponse import ErrorResponse, REGION_CODE_ERR, NO_DATA_ERROR_RESPONSE
 from model.MongoDB import client
 from model.ScrapResultCommon import (
     GenderChartDataPoint,
@@ -24,7 +24,7 @@ AGE_STAIR = 10
 
 @router.get("/template-data/{metroId}")
 async def getMetroTemplateData(
-    metroId: int, factor: FactorType
+    metroId: int, factor: FactorType, year: int=2022
 ) -> ErrorResponse | GenderTemplateDataMetro | AgeTemplateDataMetro | PartyTemplateDataMetro:
     if (
         await client.district_db["metro_district"].find_one({"metroId": metroId})
@@ -57,6 +57,9 @@ async def getMetroTemplateData(
             )
             years.sort()
             assert len(years) >= 2
+            year_index = years.index(year)
+            if year_index == 0:
+                return NO_DATA_ERROR_RESPONSE
 
             current = await client.stats_db["gender_hist"].find_one(
                 {
@@ -64,7 +67,7 @@ async def getMetroTemplateData(
                     "level": 1,
                     "is_elected": True,
                     "metroId": metroId,
-                    "year": years[-1],
+                    "year": years[year_index],
                 }
             )
 
@@ -74,7 +77,7 @@ async def getMetroTemplateData(
                     "level": 1,
                     "is_elected": True,
                     "metroId": metroId,
-                    "year": years[-2],
+                    "year": years[year_index-1],
                 }
             )
 
@@ -87,7 +90,7 @@ async def getMetroTemplateData(
                                 "councilorType": "metro_councilor",
                                 "level": 1,
                                 "is_elected": True,
-                                "year": years[-1],
+                                "year": years[year_index],
                             }
                         },
                         {
@@ -110,12 +113,12 @@ async def getMetroTemplateData(
                     "metroId": metroId,
                     "genderDiversityIndex": metro_stat["genderDiversityIndex"],
                     "current": {
-                        "year": years[-1],
+                        "year": years[year_index],
                         "malePop": current["남"],
                         "femalePop": current["여"],
                     },
                     "prev": {
-                        "year": years[-2],
+                        "year": years[year_index-1],
                         "malePop": previous["남"],
                         "femalePop": previous["여"],
                     },
@@ -155,6 +158,10 @@ async def getMetroTemplateData(
                 }
             )
             years.sort()
+            year_index = years.index(year)
+            if year_index == 0:
+                return NO_DATA_ERROR_RESPONSE
+            
             history_candidate = [
                 await client.stats_db["age_hist"].find_one(
                     {
@@ -195,15 +202,14 @@ async def getMetroTemplateData(
                                 "councilorType": "metro_councilor",
                                 "is_elected": True,
                                 "metroId": metroId,
+                                "year": years[year_index],
                             }
                         },
-                        {"$sort": {"year": -1}},
-                        {"$limit": 1},
                     ]
                 )
                 .to_list(500)
             )[0]
-            most_recent_year = age_stat_elected["year"]
+            most_recent_year = year
             age_stat_candidate = await client.stats_db["age_stat"].find_one(
                 {
                     "level": 1,
@@ -259,7 +265,7 @@ async def getMetroTemplateData(
                         ],
                     },
                     "indexHistoryParagraph": {
-                        "mostRecentYear": years[-1],
+                        "mostRecentYear": years[year_index],
                         "history": [
                             {
                                 "year": year,
@@ -322,13 +328,17 @@ async def getMetroTemplateData(
             years.sort()
             assert len(years) >= 2
 
+            year_index = years.index(year)
+            if year_index == 0:
+                return NO_DATA_ERROR_RESPONSE
+
             current_elected = client.stats_db["party_hist"].find(
                 {
                     "councilorType": "metro_councilor",
                     "level": 1,
                     "is_elected": True,
                     "metroId": metroId,
-                    "year": years[-1],
+                    "year": years[year_index],
                 },
                 {
                     "_id": 0,
@@ -345,7 +355,7 @@ async def getMetroTemplateData(
                     "level": 1,
                     "is_elected": False,
                     "metroId": metroId,
-                    "year": years[-1],
+                    "year": years[year_index],
                 },
                 {
                     "_id": 0,
@@ -362,7 +372,7 @@ async def getMetroTemplateData(
                     "level": 1,
                     "is_elected": True,
                     "metroId": metroId,
-                    "year": years[-2],
+                    "year": years[year_index - 1],
                 },
                 {
                     "_id": 0,
@@ -407,7 +417,7 @@ T = TypeVar(
 
 @router.get("/chart-data/{metroId}")
 async def getMetroChartData(
-    metroId: int, factor: FactorType
+    metroId: int, factor: FactorType, year:int = 2022
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
@@ -433,10 +443,9 @@ async def getMetroChartData(
                         "level": 1,
                         "is_elected": True,
                         "metroId": metroId,
+                        "year": year,
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
 
@@ -459,10 +468,9 @@ async def getMetroChartData(
                         "is_elected": True,
                         "method": "equal",
                         "metroId": metroId,
+                        "year": year,
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
             age_list = [
@@ -491,10 +499,9 @@ async def getMetroChartData(
                         "level": 1,
                         "is_elected": True,
                         "metroId": metroId,
+                        "year": year
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
             return ChartData[PartyChartDataPoint].model_validate(

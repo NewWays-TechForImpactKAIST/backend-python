@@ -284,15 +284,12 @@ async def getLocalTemplateData(
                                     group["count"]
                                     for group in history_candidate[idx]["data"]
                                 ),
-                                # "candidateCount": 0,
                                 "candidateDiversityIndex": history_candidate[idx][
                                     "diversityIndex"
                                 ],
                                 "candidateDiversityRank": history_candidate[idx][
                                     "diversityRank"
                                 ],
-                                # "candidateDiversityIndex": 0.0,
-                                # "candidateDiversityRank": 0,
                                 "electedDiversityIndex": history_elected[idx][
                                     "diversityIndex"
                                 ],

@@ -127,31 +127,31 @@ async def getNationalTemplateData(
             # ============================
             #    ageHistogramParagraph
             # ============================
-            # age_stat_elected = (
-            #     await client.stats_db["age_stat"]
-            #     .aggregate(
-            #         [
-            #             {
-            #                 "$match": {
-            #                     "level": 0,
-            #                     "councilorType": "national_councilor",
-            #                     "is_elected": True,
-            #                 }
-            #             },
-            #             {"$sort": {"year": -1}},
-            #             {"$limit": 1},
-            #         ]
-            #     )
-            #     .to_list(500)
-            # )[0]
-            # most_recent_year = age_stat_elected["year"]
-            # age_stat_candidate = await client.stats_db["age_stat"].find_one(
-            #     {
-            #         "councilorType": "national_councilor",
-            #         "is_elected": False,
-            #         "year": most_recent_year,
-            #     }
-            # )
+            age_stat_elected = (
+                await client.stats_db["age_stat"]
+                .aggregate(
+                    [
+                        {
+                            "$match": {
+                                "level": 0,
+                                "councilorType": "national_councilor",
+                                "is_elected": True,
+                            }
+                        },
+                        {"$sort": {"year": -1}},
+                        {"$limit": 1},
+                    ]
+                )
+                .to_list(500)
+            )[0]
+            most_recent_year = age_stat_elected["year"]
+            age_stat_candidate = await client.stats_db["age_stat"].find_one(
+                {
+                    "councilorType": "national_councilor",
+                    "is_elected": False,
+                    "year": most_recent_year,
+                }
+            )
 
             return AgeTemplateDataNational.model_validate(
                 {
@@ -159,8 +159,7 @@ async def getNationalTemplateData(
                         "ageDiversityIndex": age_diversity_index,
                     },
                     "indexHistoryParagraph": {
-                        # "mostRecentYear": years[-1],
-                        "mostRecentYear": 2022,
+                        "mostRecentYear": years[-1],
                         "history": [
                             {
                                 "year": year,
@@ -169,15 +168,12 @@ async def getNationalTemplateData(
                                     group["count"]
                                     for group in history_candidate[idx]["data"]
                                 ),
-                                # "candidateCount": 0,
                                 "candidateDiversityIndex": history_candidate[idx][
                                     "diversityIndex"
                                 ],
                                 "candidateDiversityRank": history_candidate[idx][
                                     "diversityRank"
                                 ],
-                                # "candidateDiversityIndex": 0.0,
-                                # "candidateDiversityRank": 0,
                                 "electedDiversityIndex": history_elected[idx][
                                     "diversityIndex"
                                 ],
@@ -188,19 +184,12 @@ async def getNationalTemplateData(
                             for idx, year in enumerate(years)
                         ],
                     },
-                    # "ageHistogramParagraph": {
-                    #     "year": most_recent_year,
-                    #     "candidateCount": age_stat_candidate["data"][0]["population"],
-                    #     "electedCount": age_stat_elected["data"][0]["population"],
-                    #     "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
-                    #     "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
-                    # },
                     "ageHistogramParagraph": {
-                        "year": 2022,
-                        "candidateCount": 99999,
-                        "electedCount": 88888,
-                        "firstQuintile": 98,
-                        "lastQuintile": 18,
+                        "year": most_recent_year,
+                        "candidateCount": age_stat_candidate["data"][0]["population"],
+                        "electedCount": age_stat_elected["data"][0]["population"],
+                        "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
+                        "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
                     },
                 }
             )
@@ -322,49 +311,33 @@ async def getNationalChartData(
             )
 
         case FactorType.age:
-            # age_cnt = (
-            #     await client.stats_db["age_hist"]
-            #     .find(
-            #         {
-            #             "councilorType": "national_councilor",
-            #             "level": 0,
-            #             "is_elected": True,
-            #             "method": "equal",
-            #         }
-            #     )
-            #     .sort({"year": -1})
-            #     .limit(1)
-            #     .to_list(5)
-            # )[0]
-            # age_list = [
-            #     age["minAge"] for age in age_cnt["data"] for _ in range(age["count"])
-            # ]
-            # age_stair = diversity.count(age_list, stair=AGE_STAIR)
-            # return ChartData[AgeChartDataPoint].model_validate(
-            #     {
-            #         "data": [
-            #             {
-            #                 "minAge": age,
-            #                 "maxAge": age + AGE_STAIR,
-            #                 "count": age_stair[age],
-            #             }
-            #             for age in age_stair
-            #         ]
-            #     }
-            # )
+            age_cnt = (
+                await client.stats_db["age_hist"]
+                .find(
+                    {
+                        "councilorType": "national_councilor",
+                        "level": 0,
+                        "is_elected": True,
+                        "method": "equal",
+                    }
+                )
+                .sort({"year": -1})
+                .limit(1)
+                .to_list(5)
+            )[0]
+            age_list = [
+                age["minAge"] for age in age_cnt["data"] for _ in range(age["count"])
+            ]
+            age_stair = diversity.count(age_list, stair=AGE_STAIR)
             return ChartData[AgeChartDataPoint].model_validate(
                 {
                     "data": [
                         {
-                            "minAge": 20,
-                            "maxAge": 30,
-                            "count": 888,
-                        },
-                        {
-                            "minAge": 50,
-                            "maxAge": 60,
-                            "count": 999,
-                        },
+                            "minAge": age,
+                            "maxAge": age + AGE_STAIR,
+                            "count": age_stair[age],
+                        }
+                        for age in age_stair
                     ]
                 }
             )

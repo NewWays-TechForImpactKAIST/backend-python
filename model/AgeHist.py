@@ -19,6 +19,10 @@ class AgeHistDataPoint(BaseModel):
     ageGroup: int
 
 
+class NationalAgeHistData(BaseModel):
+    data: list[AgeHistDataPoint]
+
+
 class MetroAgeHistData(BaseModel):
     metroId: int
     data: list[AgeHistDataPoint]

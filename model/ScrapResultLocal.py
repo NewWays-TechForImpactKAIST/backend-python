@@ -5,7 +5,18 @@ from pydantic import BaseModel
 # =            Template Data Types             =
 # ==============================================
 class GenderTemplateDataLocal(BaseModel):
+    class GenderTemplateDataPoint(BaseModel):
+        year: int
+        malePop: int
+        femalePop: int
+
+    metroId: int
+    localId: int
     genderDiversityIndex: float
+    current: GenderTemplateDataPoint
+    prev: GenderTemplateDataPoint
+    meanMalePop: float
+    meanFemalePop: float
 
 
 class AgeTemplateDataLocal(BaseModel):
@@ -53,4 +64,13 @@ class AgeTemplateDataLocal(BaseModel):
 
 
 class PartyTemplateDataLocal(BaseModel):
+    class PartyCountDataPoint(BaseModel):
+        party: str
+        count: int
+
+    metroId: int
+    localId: int
     partyDiversityIndex: float
+    prevElected: list[PartyCountDataPoint]
+    currentElected: list[PartyCountDataPoint]
+    currentCandidate: list[PartyCountDataPoint]

@@ -1,6 +1,6 @@
 from typing import TypeVar
 from fastapi import APIRouter
-from model.BasicResponse import ErrorResponse, REGION_CODE_ERR
+from model.BasicResponse import ErrorResponse, NO_DATA_ERROR_RESPONSE
 from model.MongoDB import client
 from model.ScrapResultCommon import (
     GenderChartDataPoint,
@@ -9,36 +9,28 @@ from model.ScrapResultCommon import (
     FactorType,
     ChartData,
 )
-from model.ScrapResultMetro import (
-    GenderTemplateDataMetro,
-    AgeTemplateDataMetro,
-    PartyTemplateDataMetro,
+from model.ScrapResultNational import (
+    GenderTemplateDataNational,
+    AgeTemplateDataNational,
+    PartyTemplateDataNational,
 )
 from utils import diversity
 
 
-router = APIRouter(prefix="/metroCouncil", tags=["metroCouncil"])
+router = APIRouter(prefix="/nationalCouncil", tags=["nationalCouncil"])
 
 AGE_STAIR = 10
 
 
-@router.get("/template-data/{metroId}")
-async def getMetroTemplateData(
-    metroId: int, factor: FactorType
-) -> ErrorResponse | GenderTemplateDataMetro | AgeTemplateDataMetro | PartyTemplateDataMetro:
-    if (
-        await client.district_db["metro_district"].find_one({"metroId": metroId})
-        is None
-    ):
-        return ErrorResponse.model_validate(
-            {
-                "error": "RegionCodeError",
-                "code": REGION_CODE_ERR,
-                "message": f"No metro district with metroId {metroId}.",
-            }
-        )
-
-    metro_stat = await client.stats_db["diversity_index"].find_one({"metroId": metroId})
+@router.get("/template-data")
+async def getNationalTemplateData(
+    factor: FactorType,
+) -> ErrorResponse | GenderTemplateDataNational | AgeTemplateDataNational | PartyTemplateDataNational:
+    national_stat = await client.stats_db["diversity_index"].find_one(
+        {"national": True}
+    )
+    if national_stat is None:
+        return NO_DATA_ERROR_RESPONSE
 
     match factor:
         case FactorType.gender:
@@ -47,10 +39,9 @@ async def getMetroTemplateData(
                     doc["year"]
                     async for doc in client.stats_db["gender_hist"].find(
                         {
-                            "councilorType": "metro_councilor",
-                            "level": 1,
+                            "councilorType": "national_councilor",
+                            "level": 0,
                             "is_elected": True,
-                            "metroId": metroId,
                         }
                     )
                 }
@@ -60,55 +51,25 @@ async def getMetroTemplateData(
 
             current = await client.stats_db["gender_hist"].find_one(
                 {
-                    "councilorType": "metro_councilor",
-                    "level": 1,
+                    "councilorType": "national_councilor",
+                    "level": 0,
                     "is_elected": True,
-                    "metroId": metroId,
                     "year": years[-1],
                 }
             )
 
             previous = await client.stats_db["gender_hist"].find_one(
                 {
-                    "councilorType": "metro_councilor",
-                    "level": 1,
+                    "councilorType": "national_councilor",
+                    "level": 0,
                     "is_elected": True,
-                    "metroId": metroId,
-                    "year": years[-2],
+                    "year": years[-1],
                 }
             )
 
-            current_all = (
-                await client.stats_db["gender_hist"]
-                .aggregate(
-                    [
-                        {
-                            "$match": {
-                                "councilorType": "metro_councilor",
-                                "level": 1,
-                                "is_elected": True,
-                                "year": years[-1],
-                            }
-                        },
-                        {
-                            "$group": {
-                                "_id": None,
-                                "male_tot": {"$sum": "$남"},
-                                "female_tot": {"$sum": "$여"},
-                                "district_cnt": {"$sum": 1},
-                            }
-                        },
-                    ]
-                )
-                .to_list(500)
-            )
-            assert len(current_all) == 1
-            current_all = current_all[0]
-
-            return GenderTemplateDataMetro.model_validate(
+            return GenderTemplateDataNational.model_validate(
                 {
-                    "metroId": metroId,
-                    "genderDiversityIndex": metro_stat["genderDiversityIndex"],
+                    "genderDiversityIndex": national_stat["genderDiversityIndex"],
                     "current": {
                         "year": years[-1],
                         "malePop": current["남"],
@@ -119,10 +80,6 @@ async def getMetroTemplateData(
                         "malePop": previous["남"],
                         "femalePop": previous["여"],
                     },
-                    "meanMalePop": current_all["male_tot"]
-                    / current_all["district_cnt"],
-                    "meanFemalePop": current_all["female_tot"]
-                    / current_all["district_cnt"],
                 }
             )
 
@@ -130,18 +87,7 @@ async def getMetroTemplateData(
             # ============================
             #      rankingParagraph
             # ============================
-            age_diversity_index = metro_stat["ageDiversityIndex"]
-
-            all_metroIds = [
-                doc["metroId"]
-                async for doc in client.district_db["metro_district"].find()
-            ]
-            all_indices = (
-                await client.stats_db["diversity_index"]
-                .find({"metroId": {"$in": all_metroIds}})
-                .to_list(500)
-            )
-            all_indices.sort(key=lambda x: x["ageDiversityRank"])
+            age_diversity_index = national_stat["ageDiversityIndex"]
 
             # ============================
             #    indexHistoryParagraph
@@ -150,7 +96,7 @@ async def getMetroTemplateData(
                 {
                     doc["year"]
                     async for doc in client.stats_db["age_hist"].find(
-                        {"councilorType": "metro_councilor"}
+                        {"councilorType": "national_councilor"}
                     )
                 }
             )
@@ -159,11 +105,9 @@ async def getMetroTemplateData(
                 await client.stats_db["age_hist"].find_one(
                     {
                         "year": year,
-                        "level": 1,
-                        "councilorType": "metro_councilor",
+                        "councilorType": "national_councilor",
                         "is_elected": False,
                         "method": "equal",
-                        "metroId": metroId,
                     }
                 )
                 for year in years
@@ -172,11 +116,9 @@ async def getMetroTemplateData(
                 await client.stats_db["age_hist"].find_one(
                     {
                         "year": year,
-                        "level": 1,
-                        "councilorType": "metro_councilor",
+                        "councilorType": "national_councilor",
                         "is_elected": True,
                         "method": "equal",
-                        "metroId": metroId,
                     }
                 )
                 for year in years
@@ -186,15 +128,14 @@ async def getMetroTemplateData(
             #    ageHistogramParagraph
             # ============================
             # age_stat_elected = (
-            #     await client.stats_db["age_hist"]
+            #     await client.stats_db["age_stat"]
             #     .aggregate(
             #         [
             #             {
             #                 "$match": {
-            #                     "level": 1,
-            #                     "councilorType": "metro_councilor",
+            #                     "level": 0,
+            #                     "councilorType": "national_councilor",
             #                     "is_elected": True,
-            #                     "metroId": metroId,
             #                 }
             #             },
             #             {"$sort": {"year": -1}},
@@ -204,135 +145,76 @@ async def getMetroTemplateData(
             #     .to_list(500)
             # )[0]
             # most_recent_year = age_stat_elected["year"]
-            # age_stat_candidate = await client.stats_db["age_hist"].find_one(
+            # age_stat_candidate = await client.stats_db["age_stat"].find_one(
             #     {
-            #         "level": 1,
-            #         "councilorType": "metro_councilor",
+            #         "councilorType": "national_councilor",
             #         "is_elected": False,
-            #         "metroId": metroId,
             #         "year": most_recent_year,
             #     }
             # )
 
-            # divArea_id = (
-            #     await client.stats_db["diversity_index"].find_one(
-            #         {"metroId": {"$exists": True}, "ageDiversityRank": 1}
-            #     )
-            # )["metroId"]
-            # divArea = await client.stats_db["age_hist"].find_one(
-            #     {
-            #         "level": 1,
-            #         "councilorType": "metro_councilor",
-            #         "is_elected": True,
-            #         "metroId": divArea_id,
-            #         "year": most_recent_year,
-            #     }
-            # )
-
-            # uniArea_id = (
-            #     await client.stats_db["diversity_index"].find_one(
-            #         # {"metroId": {"$exists": True}, "ageDiversityRank": 17}
-            #         {"metroId": {"$exists": True}, "ageDiversityRank": 15}
-            #     )
-            # )["metroId"]
-            # uniArea = await client.stats_db["age_hist"].find_one(
-            #     {
-            #         "level": 1,
-            #         "councilorType": "metro_councilor",
-            #         "is_elected": True,
-            #         "metroId": uniArea_id,
-            #         "year": most_recent_year,
-            #     }
-            # )
-
-            return AgeTemplateDataMetro.model_validate(
+            return AgeTemplateDataNational.model_validate(
                 {
-                    "metroId": metroId,
                     "rankingParagraph": {
                         "ageDiversityIndex": age_diversity_index,
-                        "allIndices": [
-                            {
-                                "metroId": doc["metroId"],
-                                "rank": doc["ageDiversityRank"],
-                                "ageDiversityIndex": doc["ageDiversityIndex"],
-                            }
-                            for doc in all_indices
-                        ],
                     },
                     "indexHistoryParagraph": {
-                        "mostRecentYear": years[-1],
+                        # "mostRecentYear": years[-1],
+                        "mostRecentYear": 2022,
                         "history": [
                             {
                                 "year": year,
-                                "unit": (year - 1998) / 4 + 2,
+                                "unit": (year - 2000) / 4 + 2,
                                 "candidateCount": sum(
                                     group["count"]
                                     for group in history_candidate[idx]["data"]
                                 ),
+                                # "candidateCount": 0,
                                 "candidateDiversityIndex": history_candidate[idx][
                                     "diversityIndex"
                                 ],
                                 "candidateDiversityRank": history_candidate[idx][
                                     "diversityRank"
                                 ],
-                                # "electedDiversityIndex": history_elected[idx][
-                                #     "diversityIndex"
-                                # ],
-                                # "electedDiversityRank": history_elected[idx][
-                                #     "diversityRank"
-                                # ],
-                                "electedDiversityIndex": 0.003141592,
-                                "electedDiversityRank": 99999,
+                                # "candidateDiversityIndex": 0.0,
+                                # "candidateDiversityRank": 0,
+                                "electedDiversityIndex": history_elected[idx][
+                                    "diversityIndex"
+                                ],
+                                "electedDiversityRank": history_elected[idx][
+                                    "diversityRank"
+                                ],
                             }
                             for idx, year in enumerate(years)
                         ],
                     },
+                    # "ageHistogramParagraph": {
+                    #     "year": most_recent_year,
+                    #     "candidateCount": age_stat_candidate["data"][0]["population"],
+                    #     "electedCount": age_stat_elected["data"][0]["population"],
+                    #     "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
+                    #     "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
+                    # },
                     "ageHistogramParagraph": {
-                        # "year": most_recent_year,
-                        # "candidateCount": age_stat_candidate["data"][0]["population"],
-                        # "electedCount": age_stat_elected["data"][0]["population"],
-                        # "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
-                        # "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
-                        # "divArea": {
-                        #     "metroId": divArea_id,
-                        #     "firstQuintile": divArea["data"][0]["firstquintile"],
-                        #     "lastQuintile": divArea["data"][0]["lastquintile"],
-                        # },
-                        # "uniArea": {
-                        #     "metroId": uniArea_id,
-                        #     "firstQuintile": uniArea["data"][0]["firstquintile"],
-                        #     "lastQuintile": uniArea["data"][0]["lastquintile"],
-                        # },
                         "year": 2022,
                         "candidateCount": 99999,
                         "electedCount": 88888,
-                        "firstQuintile": 74,
-                        "lastQuintile": 21,
-                        "divArea": {
-                            "metroId": 1,
-                            "firstQuintile": 45,
-                            "lastQuintile": 20,
-                        },
-                        "uniArea": {
-                            "metroId": 8,
-                            "firstQuintile": 86,
-                            "lastQuintile": 43,
-                        },
+                        "firstQuintile": 98,
+                        "lastQuintile": 18,
                     },
                 }
             )
 
         case FactorType.party:
-            party_diversity_index = metro_stat["partyDiversityIndex"]
+            party_diversity_index = national_stat["partyDiversityIndex"]
             years = list(
                 {
                     doc["year"]
                     async for doc in client.stats_db["party_hist"].find(
                         {
-                            "councilorType": "metro_councilor",
-                            "level": 1,
+                            "councilorType": "national_councilor",
+                            "level": 0,
                             "is_elected": True,
-                            "metroId": metroId,
                         }
                     )
                 }
@@ -342,10 +224,9 @@ async def getMetroTemplateData(
 
             current_elected = client.stats_db["party_hist"].find(
                 {
-                    "councilorType": "metro_councilor",
-                    "level": 1,
+                    "councilorType": "national_councilor",
+                    "level": 0,
                     "is_elected": True,
-                    "metroId": metroId,
                     "year": years[-1],
                 },
                 {
@@ -353,16 +234,14 @@ async def getMetroTemplateData(
                     "councilorType": 0,
                     "level": 0,
                     "is_elected": 0,
-                    "metroId": 0,
                     "year": 0,
                 },
             )
             current_candidate = client.stats_db["party_hist"].find(
                 {
-                    "councilorType": "metro_councilor",
-                    "level": 1,
+                    "councilorType": "national_councilor",
+                    "level": 0,
                     "is_elected": False,
-                    "metroId": metroId,
                     "year": years[-1],
                 },
                 {
@@ -370,16 +249,14 @@ async def getMetroTemplateData(
                     "councilorType": 0,
                     "level": 0,
                     "is_elected": 0,
-                    "metroId": 0,
                     "year": 0,
                 },
             )
             previous = client.stats_db["party_hist"].find(
                 {
-                    "councilorType": "metro_councilor",
-                    "level": 1,
+                    "councilorType": "national_councilor",
+                    "level": 0,
                     "is_elected": True,
-                    "metroId": metroId,
                     "year": years[-2],
                 },
                 {
@@ -387,14 +264,12 @@ async def getMetroTemplateData(
                     "councilorType": 0,
                     "level": 0,
                     "is_elected": 0,
-                    "metroId": 0,
                     "year": 0,
                 },
             )
 
-            return PartyTemplateDataMetro.model_validate(
+            return PartyTemplateDataNational.model_validate(
                 {
-                    "metroId": metroId,
                     "partyDiversityIndex": party_diversity_index,
                     "prevElected": [
                         {"party": party, "count": doc[party]}
@@ -415,42 +290,21 @@ async def getMetroTemplateData(
             )
 
 
-T = TypeVar(
-    "T",
-    GenderChartDataPoint,
-    AgeChartDataPoint,
-    PartyChartDataPoint,
-)
-
-
-@router.get("/chart-data/{metroId}")
-async def getMetroChartData(
-    metroId: int, factor: FactorType
+@router.get("/chart-data")
+async def getNationalChartData(
+    factor: FactorType,
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
-    if (
-        await client.district_db["metro_district"].find_one({"metroId": metroId})
-        is None
-    ):
-        return ErrorResponse.model_validate(
-            {
-                "error": "RegionCodeError",
-                "code": REGION_CODE_ERR,
-                "message": f"No metro district with metroId {metroId}.",
-            }
-        )
-
     match factor:
         case FactorType.gender:
             gender_cnt = (
                 await client.stats_db["gender_hist"]
                 .find(
                     {
-                        "councilorType": "metro_councilor",
-                        "level": 1,
+                        "councilorType": "national_councilor",
+                        "level": 0,
                         "is_elected": True,
-                        "metroId": metroId,
                     }
                 )
                 .sort({"year": -1})
@@ -472,11 +326,10 @@ async def getMetroChartData(
             #     await client.stats_db["age_hist"]
             #     .find(
             #         {
-            #             "councilorType": "metro_councilor",
-            #             "level": 1,
+            #             "councilorType": "national_councilor",
+            #             "level": 0,
             #             "is_elected": True,
             #             "method": "equal",
-            #             "metroId": metroId,
             #         }
             #     )
             #     .sort({"year": -1})
@@ -521,10 +374,9 @@ async def getMetroChartData(
                 await client.stats_db["party_hist"]
                 .find(
                     {
-                        "councilorType": "metro_councilor",
-                        "level": 1,
+                        "councilorType": "national_councilor",
+                        "level": 0,
                         "is_elected": True,
-                        "metroId": metroId,
                     }
                 )
                 .sort({"year": -1})
@@ -542,7 +394,6 @@ async def getMetroChartData(
                             "councilorType",
                             "level",
                             "is_elected",
-                            "metroId",
                             "year",
                         ]
                     ]

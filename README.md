@@ -7,7 +7,7 @@ FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레
 ## Docs
 
 본 프로젝트는 Swagger를 사용하여 API 문서를 작성하고 있습니다.
-![Swagger](https://diversity-api.tech4impact.kr/docs) 에서 API Endpoints 들을 확인하고 테스트 할 수 있습니다.
+[Swagger](https://diversity-api.tech4impact.kr/docs) 에서 API Endpoints 들을 확인하고 테스트 할 수 있습니다.
 
 ## Setup
 

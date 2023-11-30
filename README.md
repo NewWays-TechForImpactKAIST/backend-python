@@ -37,8 +37,12 @@ FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레
    ```
    - `.env` 파일을 열어 환경 변수의 값을 필요에 따라 바꾸어줍니다.
 6. uvicorn 실행
-
    - uvicorn을 사용해 fastapi를 실행합니다.
      ```bash
      uvicorn main:app --host HOST --port PORT
      ```
+7. Docker build
+   - docker image를 빌드합니다.
+   ```bash
+    docker-compose up -d -build
+   ```

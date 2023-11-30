@@ -316,7 +316,7 @@ async def getNationalTemplateData(
 
 @router.get("/chart-data")
 async def getNationalChartData(
-    factor: FactorType,
+    factor: FactorType, year: int = 2020
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
@@ -328,11 +328,10 @@ async def getNationalChartData(
                     {
                         "councilorType": "national_councilor",
                         "level": 0,
+                        "year": year,
                         "is_elected": True,
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
 
@@ -354,10 +353,9 @@ async def getNationalChartData(
                         "level": 0,
                         "is_elected": True,
                         "method": "equal",
+                        "year": year,
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
             age_list = [
@@ -385,10 +383,9 @@ async def getNationalChartData(
                         "councilorType": "national_councilor",
                         "level": 0,
                         "is_elected": True,
+                        "year": year,
                     }
                 )
-                .sort({"year": -1})
-                .limit(1)
                 .to_list(5)
             )[0]
             return ChartData[PartyChartDataPoint].model_validate(

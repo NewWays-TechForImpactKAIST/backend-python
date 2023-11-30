@@ -168,6 +168,7 @@ async def getNationalTemplateData(
                                 "level": 0,
                                 "councilorType": "national_councilor",
                                 "is_elected": True,
+                                "year": year,
                             }
                         },
                         {"$sort": {"year": -1}},

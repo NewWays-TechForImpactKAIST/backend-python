@@ -4,6 +4,11 @@
 
 FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레포지토리입니다.
 
+## Docs
+
+본 프로젝트는 Swagger를 사용하여 API 문서를 작성하고 있습니다.
+![Swagger](https://diversity-api.tech4impact.kr/docs) 에서 API Endpoints 들을 확인하고 테스트 할 수 있습니다.
+
 ## Setup
 
 이 프로젝트를 실행하기 위해서는 Python(v3.9 이상)이 설치되어 있어야 합니다.

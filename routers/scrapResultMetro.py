@@ -24,7 +24,7 @@ AGE_STAIR = 10
 
 @router.get("/template-data/{metroId}")
 async def getMetroTemplateData(
-    metroId: int, factor: FactorType, year: int=2022
+    metroId: int, factor: FactorType, year: int = 2022
 ) -> ErrorResponse | GenderTemplateDataMetro | AgeTemplateDataMetro | PartyTemplateDataMetro:
     if (
         await client.district_db["metro_district"].find_one({"metroId": metroId})
@@ -71,13 +71,33 @@ async def getMetroTemplateData(
                 }
             )
 
+            current_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": False,
+                    "metroId": metroId,
+                    "year": years[year_index],
+                }
+            )
+
             previous = await client.stats_db["gender_hist"].find_one(
                 {
                     "councilorType": "metro_councilor",
                     "level": 1,
                     "is_elected": True,
                     "metroId": metroId,
-                    "year": years[year_index-1],
+                    "year": years[year_index - 1],
+                }
+            )
+
+            previous_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "metro_councilor",
+                    "level": 1,
+                    "is_elected": False,
+                    "metroId": metroId,
+                    "year": years[year_index],
                 }
             )
 
@@ -117,10 +137,20 @@ async def getMetroTemplateData(
                         "malePop": current["남"],
                         "femalePop": current["여"],
                     },
+                    "currentCandidate": {
+                        "year": years[year_index],
+                        "malePop": current_candidate["남"],
+                        "femalePop": current_candidate["여"],
+                    },
                     "prev": {
-                        "year": years[year_index-1],
+                        "year": years[year_index - 1],
                         "malePop": previous["남"],
                         "femalePop": previous["여"],
+                    },
+                    "prevCandidate": {
+                        "year": years[year_index],
+                        "malePop": previous_candidate["남"],
+                        "femalePop": previous_candidate["여"],
                     },
                     "meanMalePop": current_all["male_tot"]
                     / current_all["district_cnt"],
@@ -161,7 +191,7 @@ async def getMetroTemplateData(
             year_index = years.index(year)
             if year_index == 0:
                 return NO_DATA_ERROR_RESPONSE
-            
+
             history_candidate = [
                 await client.stats_db["age_hist"].find_one(
                     {
@@ -417,7 +447,7 @@ T = TypeVar(
 
 @router.get("/chart-data/{metroId}")
 async def getMetroChartData(
-    metroId: int, factor: FactorType, year:int = 2022
+    metroId: int, factor: FactorType, year: int = 2022
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
@@ -499,7 +529,7 @@ async def getMetroChartData(
                         "level": 1,
                         "is_elected": True,
                         "metroId": metroId,
-                        "year": year
+                        "year": year,
                     }
                 )
                 .to_list(5)

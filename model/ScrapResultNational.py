@@ -12,7 +12,9 @@ class GenderTemplateDataNational(BaseModel):
 
     genderDiversityIndex: float
     current: GenderTemplateDataPoint
+    currentCandidate: GenderTemplateDataPoint
     prev: GenderTemplateDataPoint
+    prevCandidate: GenderTemplateDataPoint
 
 
 class AgeTemplateDataNational(BaseModel):

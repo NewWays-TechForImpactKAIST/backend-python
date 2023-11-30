@@ -24,7 +24,7 @@ AGE_STAIR = 10
 
 @router.get("/template-data")
 async def getNationalTemplateData(
-    factor: FactorType,
+    factor: FactorType, year: int = 2020
 ) -> ErrorResponse | GenderTemplateDataNational | AgeTemplateDataNational | PartyTemplateDataNational:
     national_stat = await client.stats_db["diversity_index"].find_one(
         {"national": True}
@@ -49,12 +49,25 @@ async def getNationalTemplateData(
             years.sort()
             assert len(years) >= 2
 
+            year_index = years.index(year)
+            if year_index == 0:
+                return NO_DATA_ERROR_RESPONSE
+
             current = await client.stats_db["gender_hist"].find_one(
                 {
                     "councilorType": "national_councilor",
                     "level": 0,
                     "is_elected": True,
-                    "year": years[-1],
+                    "year": years[year_index],
+                }
+            )
+
+            current_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "national_councilor",
+                    "level": 0,
+                    "is_elected": False,
+                    "year": years[year_index - 1],
                 }
             )
 
@@ -63,7 +76,16 @@ async def getNationalTemplateData(
                     "councilorType": "national_councilor",
                     "level": 0,
                     "is_elected": True,
-                    "year": years[-1],
+                    "year": years[year_index],
+                }
+            )
+
+            previous_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "national_councilor",
+                    "level": 0,
+                    "is_elected": False,
+                    "year": years[year_index - 1],
                 }
             )
 
@@ -71,14 +93,24 @@ async def getNationalTemplateData(
                 {
                     "genderDiversityIndex": national_stat["genderDiversityIndex"],
                     "current": {
-                        "year": years[-1],
+                        "year": years[year_index],
                         "malePop": current["남"],
                         "femalePop": current["여"],
                     },
+                    "currentCandidate": {
+                        "year": years[year_index - 1],
+                        "malePop": current_candidate["남"],
+                        "femalePop": current_candidate["여"],
+                    },
                     "prev": {
-                        "year": years[-2],
+                        "year": years[year_index],
                         "malePop": previous["남"],
                         "femalePop": previous["여"],
+                    },
+                    "prevCandidate": {
+                        "year": years[year_index - 1],
+                        "malePop": previous_candidate["남"],
+                        "femalePop": previous_candidate["여"],
                     },
                 }
             )

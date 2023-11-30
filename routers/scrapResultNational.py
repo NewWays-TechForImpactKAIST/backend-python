@@ -242,13 +242,16 @@ async def getNationalTemplateData(
             )
             years.sort()
             assert len(years) >= 2
-
+            year_index = years.index(year)
+            if year_index == 0:
+                return NO_DATA_ERROR_RESPONSE
+            
             current_elected = client.stats_db["party_hist"].find(
                 {
                     "councilorType": "national_councilor",
                     "level": 0,
                     "is_elected": True,
-                    "year": years[-1],
+                    "year": years[year_index],
                 },
                 {
                     "_id": 0,
@@ -263,7 +266,7 @@ async def getNationalTemplateData(
                     "councilorType": "national_councilor",
                     "level": 0,
                     "is_elected": False,
-                    "year": years[-1],
+                    "year": years[year_index],
                 },
                 {
                     "_id": 0,
@@ -278,7 +281,7 @@ async def getNationalTemplateData(
                     "councilorType": "national_councilor",
                     "level": 0,
                     "is_elected": True,
-                    "year": years[-2],
+                    "year": years[year_index - 1],
                 },
                 {
                     "_id": 0,

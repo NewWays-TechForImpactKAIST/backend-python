@@ -13,7 +13,7 @@ FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레
 
 이 프로젝트를 실행하기 위해서는 Python(v3.9 이상)이 설치되어 있어야 합니다.
 
-## 설치 및 실행 과정
+### 개발환경 설정 과정
 
 1. 파이썬 가상환경 생성
    - 아래 명령을 실행하여 파이썬 가상환경을 생성합니다.
@@ -40,14 +40,29 @@ FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레
    ```bash
     cp .env.example .env
    ```
-   - `.env` 파일을 열어 환경 변수의 값을 필요에 따라 바꾸어줍니다.
+   - `.env` 파일을 열어 환경변수를 필요에 따라 변경합니다.
 6. uvicorn 실행
    - uvicorn을 사용해 fastapi를 실행합니다.
      ```bash
      uvicorn main:app --host HOST --port PORT
      ```
-7. Docker build
-   - docker image를 빌드합니다.
+
+### 배포 과정
+
+이 레포의 main 브랜치에 새 커밋이 생성될 때마다, GitHub Actions를 통해 배포용 Docker 이미지가 빌드됩니다.
+이 Docker 이미지를 사용하여 서비스를 배포할 수 있습니다.
+
+1. 환경변수 설정
+   - `.env.example` 파일을 복사하여 `.env` 파일을 생성합니다.
    ```bash
-    docker-compose up -d -build
+    cp .env.example .env
    ```
+   - `.env` 파일을 열어 환경변수를 필요에 따라 변경합니다.
+
+2. 백엔드 컨테이너 배포
+   - 컨테이너를 아래 명령으로 생성합니다.
+   ```bash
+    docker-compose -f docker-compose.dev.yml up -d
+   ```
+   - `newways-watchtower`는 1분에 한 번씩 새 백엔드 이미지가 있는지 확인하여, 백엔드 컨테이너를 주기적으로 업데이트하는 역할을 수행합니다.
+

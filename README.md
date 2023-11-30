@@ -42,7 +42,3 @@ FastAPI로 개발되는 다양성 평가 리포트 웹사이트의 백엔드 레
      ```bash
      uvicorn main:app --host HOST --port PORT
      ```
-
-   ```
-
-   ```

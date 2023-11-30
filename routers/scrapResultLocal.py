@@ -24,7 +24,7 @@ AGE_STAIR = 10
 
 @router.get("/template-data/{metroId}/{localId}")
 async def getLocalTemplateData(
-    metroId: int, localId: int, factor: FactorType, year:int = 2022
+    metroId: int, localId: int, factor: FactorType, year: int = 2022
 ) -> ErrorResponse | GenderTemplateDataLocal | AgeTemplateDataLocal | PartyTemplateDataLocal:
     if (
         await client.district_db["local_district"].find_one(
@@ -79,6 +79,17 @@ async def getLocalTemplateData(
                 }
             )
 
+            current_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "local_councilor",
+                    "level": 2,
+                    "is_elected": False,
+                    "localId": localId,
+                    "metroId": metroId,
+                    "year": years[year_index],
+                }
+            )
+
             previous = await client.stats_db["gender_hist"].find_one(
                 {
                     "councilorType": "local_councilor",
@@ -87,6 +98,17 @@ async def getLocalTemplateData(
                     "localId": localId,
                     "metroId": metroId,
                     "year": years[year_index - 1],
+                }
+            )
+
+            previous_candidate = await client.stats_db["gender_hist"].find_one(
+                {
+                    "councilorType": "local_councilor",
+                    "level": 2,
+                    "is_elected": False,
+                    "localId": localId,
+                    "metroId": metroId,
+                    "year": years[year_index],
                 }
             )
 
@@ -127,10 +149,20 @@ async def getLocalTemplateData(
                         "malePop": current["남"],
                         "femalePop": current["여"],
                     },
+                    "currentCandidate": {
+                        "year": years[year_index],
+                        "malePop": current_candidate["남"],
+                        "femalePop": current_candidate["여"],
+                    },
                     "prev": {
                         "year": years[year_index - 1],
                         "malePop": previous["남"],
                         "femalePop": previous["여"],
+                    },
+                    "prevCandidate": {
+                        "year": years[year_index],
+                        "malePop": previous_candidate["남"],
+                        "femalePop": previous_candidate["여"],
                     },
                     "meanMalePop": current_all["male_tot"]
                     / current_all["district_cnt"],
@@ -351,7 +383,7 @@ async def getLocalTemplateData(
             year_index = years.index(year)
             if year_index == 0:
                 return NO_DATA_ERROR_RESPONSE
-            
+
             current_elected = client.stats_db["party_hist"].find(
                 {
                     "councilorType": "local_councilor",
@@ -436,7 +468,7 @@ async def getLocalTemplateData(
 
 @router.get("/chart-data/{metroId}/{localId}")
 async def getLocalChartData(
-    metroId: int, localId: int, factor: FactorType, year:int = 2022
+    metroId: int, localId: int, factor: FactorType, year: int = 2022
 ) -> ErrorResponse | ChartData[GenderChartDataPoint] | ChartData[
     AgeChartDataPoint
 ] | ChartData[PartyChartDataPoint]:
@@ -465,7 +497,7 @@ async def getLocalChartData(
                         "is_elected": True,
                         "localId": localId,
                         "metroId": metroId,
-                        "year": year
+                        "year": year,
                     }
                 )
                 .limit(1)
@@ -492,7 +524,7 @@ async def getLocalChartData(
                         "method": "equal",
                         "localId": localId,
                         "metroId": metroId,
-                        "year": year
+                        "year": year,
                     }
                 )
                 .limit(1)
@@ -525,7 +557,7 @@ async def getLocalChartData(
                         "is_elected": True,
                         "localId": localId,
                         "metroId": metroId,
-                        "year": year
+                        "year": year,
                     }
                 )
                 .limit(1)

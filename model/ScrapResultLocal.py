@@ -14,7 +14,9 @@ class GenderTemplateDataLocal(BaseModel):
     localId: int
     genderDiversityIndex: float
     current: GenderTemplateDataPoint
+    currentCandidate: GenderTemplateDataPoint
     prev: GenderTemplateDataPoint
+    prevCandidate: GenderTemplateDataPoint
     meanMalePop: float
     meanFemalePop: float
 

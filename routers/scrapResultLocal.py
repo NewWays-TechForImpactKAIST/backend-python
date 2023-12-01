@@ -270,20 +270,26 @@ async def getLocalTemplateData(
                 }
             )
 
-            divArea_id = (
-                await client.stats_db["diversity_index"].find_one(
-                    {"localId": {"$exists": True}, "ageDiversityRank": 1}
-                )
-            )["localId"]
-            divArea = await client.stats_db["age_stat"].find_one(
-                {
-                    "level": 2,
-                    "councilorType": "local_councilor",
-                    "is_elected": True,
-                    "localId": divArea_id,
-                    "year": most_recent_year,
-                }
+            areas_sorted = (
+                client.stats_db["diversity_index"]
+                .find({"localId": {"$exists": True}})
+                .sort("ageDiversityRank")
             )
+            async for area in areas_sorted:
+                divArea = await client.stats_db["age_stat"].find_one(
+                    {
+                        "level": 2,
+                        "councilorType": "local_councilor",
+                        "is_elected": True,
+                        "localId": area["localId"],
+                        "year": most_recent_year,
+                    }
+                )
+                if divArea is not None:
+                    break
+
+            if divArea is None:
+                return NO_DATA_ERROR_RESPONSE
 
             uniArea_id = (
                 await client.stats_db["diversity_index"].find_one(
@@ -348,7 +354,7 @@ async def getLocalTemplateData(
                         "firstQuintile": age_stat_elected["data"][0]["firstquintile"],
                         "lastQuintile": age_stat_elected["data"][0]["lastquintile"],
                         "divArea": {
-                            "localId": divArea_id,
+                            "localId": divArea["localId"],
                             "firstQuintile": divArea["data"][0]["firstquintile"],
                             "lastQuintile": divArea["data"][0]["lastquintile"],
                         },
